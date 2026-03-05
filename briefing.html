@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>⚓ PIRATES! Caribbean</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0e1a;font-family:'Press Start 2P',monospace}
+canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;position:absolute;top:0;left:0}
+#hud{position:fixed;top:0;left:0;right:0;z-index:30;pointer-events:none}
+#topbar{display:flex;justify-content:space-between;align-items:flex-start;padding:5px 8px;background:linear-gradient(#000e,#0008);border-bottom:1px solid #2244aa}
+.sc{color:#f0c040;font-size:6px;line-height:2.1;min-width:90px}
+.sc.r{text-align:right}
+#hpbar{display:flex;align-items:center;gap:3px;margin-top:2px}
+.hs{width:7px;height:7px;border:1px solid #446;background:#113}
+.hs.f{background:#22dd44;border-color:#44ff66}
+.hs.lo{background:#dd4422;border-color:#ff6644}
+#minimap{position:fixed;bottom:8px;right:8px;border:2px solid #334477;background:#000;z-index:30;pointer-events:none}
+#log{position:fixed;bottom:8px;left:8px;z-index:30;pointer-events:none;max-width:190px}
+.le{background:rgba(0,0,0,0.88);border-left:2px solid #f0c040;color:#f0c040;font-size:6px;padding:3px 6px;margin-bottom:2px;line-height:1.7}
+.le.r{border-color:#ff4444;color:#ff8888}
+.le.g{border-color:#44ff88;color:#88ffaa}
+.le.b{border-color:#44aaff;color:#88ccff}
+.le.o{border-color:#ffaa44;color:#ffcc88}
+#pmenu,#cmenu{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#060d1a;border:2px solid #5566aa;padding:16px 18px;z-index:40;min-width:220px;display:none;box-shadow:0 0 20px #0008}
+#pmenu h3,#cmenu h3{color:#f0c040;font-size:8px;margin-bottom:12px;text-align:center;border-bottom:1px solid #334;padding-bottom:6px}
+.mb{display:block;width:100%;padding:8px 8px;font-family:inherit;font-size:6px;margin-bottom:5px;cursor:pointer;border:1px solid;background:transparent;text-align:left;line-height:1.6}
+.mb:active{opacity:0.7}
+.mb.g{color:#44ff88;border-color:#44ff88}.mb.r{color:#ff5544;border-color:#ff5544}
+.mb.y{color:#f0c040;border-color:#f0c040}.mb.gr{color:#777;border-color:#444}
+.mc{color:#555;font-size:6px;cursor:pointer;pointer-events:all;text-align:right;margin-top:6px}
+#era{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:50;pointer-events:none;display:none;text-align:center}
+#era .etxt{font-size:11px;color:#ffcc44;text-shadow:0 0 12px #ff8800,0 0 24px #ff4400;padding:10px 18px;background:rgba(0,0,0,0.85);border:2px solid #ff8800}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">
+  <div id="topbar">
+    <div class="sc">
+      <div>⚓ <span id="snEl">BRIGANTINE</span></div>
+      <div>💰 <span id="gEl">500</span> GOLD</div>
+      <div>👥 <span id="cEl">80</span> CREW</div>
+      <div>📅 DAY <span id="dEl">1</span></div>
+    </div>
+    <div class="sc" style="text-align:center">
+      <div style="color:#aac4ff;font-size:5px;margin-bottom:1px">HULL</div>
+      <div id="hpbar"></div>
+      <div style="margin-top:3px;color:#88ccff;font-size:5px">🔫 <span id="cnEl">8</span> CANNONS</div>
+      <div style="color:#88aaff;font-size:5px">🌬 WIND <span id="wdEl">E</span> <span id="wsEl"></span></div>
+    </div>
+    <div class="sc r">
+      <div>⭐ FAME <span id="fEl">0</span></div>
+      <div>💀 KILLS <span id="kEl">0</span></div>
+      <div>⚓ FLEET <span id="flEl">1</span></div>
+      <div style="color:#ff8866;font-size:5px">ERA <span id="eraEl">I</span></div>
+    </div>
+  </div>
+</div>
+<canvas id="minimap" width="110" height="88"></canvas>
+<div id="log"></div>
+<div id="pmenu"><h3 id="ptitle">PORT</h3><div id="pbody"></div><div class="mc" id="pclose">[ CLOSE ]</div></div>
+<div id="cmenu"><h3 id="ctitle">CAPTURED!</h3><div id="cbody"></div><div class="mc" id="cclose">[ CLOSE ]</div></div>
+<div id="era"><div class="etxt" id="eraTxt"></div></div>
+
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════════════════════════════
+const TILE=16, W=256, H=200, SEED=42;
+const T={DEEP:0,SEA:1,SHALLOW:2,SAND:3,GRASS:4,FOREST:5,HILL:6,PEAK:7,SNOW:8,PORT:9,REEF:10};
+
+// Speed scale — everything in world-tiles per second (NOT per ms)
+// Ships move ~0.5–2.5 tiles/sec which feels strategic on a 256-tile world
+const SPD_SCALE = 1/1000; // multiply by dt(ms) to get tiles moved
+
+// ═══════════════════════════════════════════════════════════
+//  RNG + NOISE
+// ═══════════════════════════════════════════════════════════
+function mkRng(s){return()=>{s=(s*1664525+1013904223)&0xffffffff;return(s>>>0)/0xffffffff;}}
+function makeNoise(rng,w,h,oct){
+  const grids=[];
+  for(let o=0;o<oct;o++){
+    const sc=Math.pow(2,o+2),gw=Math.ceil(w/sc)+2;
+    const g=new Float32Array(gw*(Math.ceil(h/sc)+2));
+    for(let i=0;i<g.length;i++)g[i]=rng();
+    grids.push({g,gw,sc});
+  }
+  const out=new Float32Array(w*h);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    let v=0,a=1,tot=0;
+    for(let o=0;o<oct;o++){
+      const {g,gw,sc}=grids[o];
+      const fx=x/sc,fy=y/sc,ix=~~fx,iy=~~fy,tx=fx-ix,ty=fy-iy;
+      const sm=t=>t*t*(3-2*t),sx=sm(tx),sy=sm(ty);
+      const a00=g[iy*gw+ix]||0,a10=g[iy*gw+ix+1]||0,a01=g[(iy+1)*gw+ix]||0,a11=g[(iy+1)*gw+ix+1]||0;
+      v+=(a00+(a10-a00)*sx+(a01-a00+(a00-a10+a11-a01)*sx)*sy)*a;
+      tot+=a;a*=0.5;
+    }
+    out[y*w+x]=v/tot;
+  }
+  return out;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  WORLD GEN — TRUE ARCHIPELAGO
+// ═══════════════════════════════════════════════════════════
+const n0=makeNoise(mkRng(SEED),W,H,5), n1=makeNoise(mkRng(SEED+1),W,H,3);
+const world=new Uint8Array(W*H), wVar=new Uint8Array(W*H);
+
+const rngIsle=mkRng(SEED+200);
+const isles=[];
+for(let i=0;i<65;i++){
+  isles.push({cx:4+rngIsle()*(W-8),cy:4+rngIsle()*(H-8),
+    rx:4+rngIsle()*18,ry:4+rngIsle()*14,str:0.55+rngIsle()*0.5});
+}
+const hmap=new Float32Array(W*H);
+for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+  const i=y*W+x; let peak=0;
+  for(const isle of isles){
+    const dx=(x-isle.cx)/isle.rx,dy=(y-isle.cy)/isle.ry,d2=dx*dx+dy*dy;
+    if(d2<1){const h=isle.str*(1-d2)*(1-d2);if(h>peak)peak=h;}
+  }
+  hmap[i]=peak+n0[i]*0.12-0.04; wVar[i]=~~(n1[i]*3);
+}
+for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+  const i=y*W+x,v=hmap[i];
+  if(v<0.08)world[i]=T.DEEP;else if(v<0.18)world[i]=T.SEA;
+  else if(v<0.25)world[i]=T.SHALLOW;else if(v<0.30)world[i]=T.SAND;
+  else if(v<0.44)world[i]=T.GRASS;else if(v<0.56)world[i]=T.FOREST;
+  else if(v<0.68)world[i]=T.HILL;else if(v<0.76)world[i]=T.PEAK;
+  else world[i]=T.SNOW;
+}
+// Flood-fill: kill inland lakes
+const oceanMark=new Uint8Array(W*H), bfsQ=[];
+for(let x=0;x<W;x++){[x,(H-1)*W+x].forEach(i=>{if(world[i]<=T.SHALLOW){oceanMark[i]=1;bfsQ.push(i);}});}
+for(let y=0;y<H;y++){[y*W,y*W+W-1].forEach(i=>{if(world[i]<=T.SHALLOW){oceanMark[i]=1;bfsQ.push(i);}});}
+for(let qi=0;qi<bfsQ.length;qi++){
+  const idx=bfsQ[qi],x=idx%W,y=~~(idx/W);
+  for(const nb of[idx-1,idx+1,idx-W,idx+W]){
+    if(nb<0||nb>=W*H||Math.abs(nb%W-x)>1)continue;
+    if(!oceanMark[nb]&&world[nb]<=T.REEF){oceanMark[nb]=1;bfsQ.push(nb);}
+  }
+}
+for(let i=0;i<W*H;i++)if(!oceanMark[i]&&world[i]<=T.SHALLOW)world[i]=T.GRASS;
+// Reefs
+const rR=mkRng(SEED+99);
+for(let i=0;i<100;i++){
+  const rx=~~(rR()*W),ry=~~(rR()*H);
+  if(world[ry*W+rx]===T.SEA||world[ry*W+rx]===T.SHALLOW)
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+      const nx=rx+dx,ny=ry+dy;
+      if(nx>=0&&nx<W&&ny>=0&&ny<H&&rR()<0.5)world[ny*W+nx]=T.REEF;
+    }
+}
+function isSail(tx,ty){
+  if(tx<0||tx>=W||ty<0||ty>=H)return false;
+  const t=world[ty*W+tx];return t<=T.REEF; // DEEP,SEA,SHALLOW,REEF all sailable
+}
+function isLand(tx,ty){return !isSail(tx,ty) && tx>=0&&tx<W&&ty>=0&&ty<H;}
+
+// ═══════════════════════════════════════════════════════════
+//  SHIP TYPE DEFINITIONS
+//  spd = tiles/sec base speed  rl = reload ms  rng = broadside range (tiles)
+// ═══════════════════════════════════════════════════════════
+const ST={
+  SLOOP:    {spd:1.4, hp:8,  cn:4,  rl:4500, rng:4.5, acc:0.55, col:'#88ffaa', loot:150,  xp:1,  turn:1.2},
+  BRIGANTINE:{spd:1.1,hp:14, cn:8,  rl:5500, rng:5.5, acc:0.60, col:'#44aaff', loot:320,  xp:2,  turn:1.0},
+  FRIGATE:  {spd:0.85,hp:22, cn:16, rl:7000, rng:6.5, acc:0.65, col:'#ffaa44', loot:650,  xp:5,  turn:0.85},
+  GALLEON:  {spd:0.65,hp:36, cn:28, rl:9000, rng:7.5, acc:0.68, col:'#ff8822', loot:1400, xp:9,  turn:0.65},
+  MAN_O_WAR:{spd:0.45,hp:60, cn:44, rl:12000,rng:9.0, acc:0.72, col:'#ff2222', loot:2500, xp:22, turn:0.5},
+};
+const STKEYS=Object.keys(ST);
+
+// ═══════════════════════════════════════════════════════════
+//  PORTS
+// ═══════════════════════════════════════════════════════════
+const PNAMES=['HAVANA','PORTO BELLO','CARTAGENA','VERA CRUZ','CAMPECHE','MARACAIBO','CARACAS','TRINIDAD','BARBADOS','TORTUGA','PORT ROYAL','NASSAU','SANTO DOMINGO','SANTIAGO','RIO DE ORO','SANTA MARTA','CUMANA','MARGARITA','CURACAO','ST KITTS','MARTINIQUE','GUADELOUPE','DOMINICA','ANTIGUA','MONTSERRAT','CAT IS','GRAND CAYMAN','PORT AU PRINCE','BELIZE','PANAMA'];
+const NATS=['SPAIN','ENGLAND','FRANCE','DUTCH','PIRATE'];
+const NFLAG={SPAIN:'🇪🇸',ENGLAND:'🏴',FRANCE:'🇫🇷',DUTCH:'🇳🇱',PIRATE:'🏴‍☠️'};
+const ports=[];
+const rP=mkRng(SEED+7);
+for(let a=0;a<8000&&ports.length<PNAMES.length;a++){
+  const px=5+~~(rP()*(W-10)),py=5+~~(rP()*(H-10));
+  if(world[py*W+px]===T.SAND||world[py*W+px]===T.GRASS){
+    let hs=false;
+    for(let dy=-3;dy<=3;dy++)for(let dx=-3;dx<=3;dx++){
+      if(isSail(px+dx,py+dy))hs=true;
+    }
+    if(hs&&!ports.some(p=>Math.abs(p.x-px)<14&&Math.abs(p.y-py)<14)){
+      const nat=NATS[~~(rP()*NATS.length)];
+      world[py*W+px]=T.PORT;
+      ports.push({x:px,y:py,name:PNAMES[ports.length],nat,
+        rel:nat==='PIRATE'?'neutral':'friendly',
+        garrison:5+~~(rP()*20),wealth:600+~~(rP()*2000),
+        cannons:4+~~(rP()*12),
+        attackTimer:0, // cooldown before this port sends an attack fleet
+        defFleet:[],  // defending ships spawned by this port
+      });
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TREASURES (initial set)
+// ═══════════════════════════════════════════════════════════
+const rT=mkRng(SEED+22);
+const treas=[];
+function spawnTreasure(count){
+  for(let a=0;a<5000&&count>0;a++){
+    const tx=~~(rT()*W),ty=~~(rT()*H);
+    if(world[ty*W+tx]===T.SAND||world[ty*W+tx]===T.GRASS){
+      if(!treas.some(t=>!t.l&&Math.abs(t.x-tx)<5&&Math.abs(t.y-ty)<5)){
+        treas.push({x:tx,y:ty,g:200+~~(rT()*1400),l:false});
+        count--;
+      }
+    }
+  }
+}
+spawnTreasure(35);
+
+// ═══════════════════════════════════════════════════════════
+//  ENEMIES
+// ═══════════════════════════════════════════════════════════
+const ROLES=['MERCHANT','PIRATE','WARSHIP','ESCORT','PATROL'];
+const TIERS=['EASY','MEDIUM','HARD','ELITE','LEGEND'];
+const BEHAVIOR={
+  MERCHANT:{aggro:0.0, flee:0.60, wander:true,  portAttack:false},
+  PIRATE:  {aggro:0.85,flee:0.25, wander:true,  portAttack:true},
+  WARSHIP: {aggro:0.60,flee:0.15, wander:false, portAttack:true},
+  ESCORT:  {aggro:0.75,flee:0.15, wander:false, portAttack:false},
+  PATROL:  {aggro:0.50,flee:0.20, wander:true,  portAttack:false},
+};
+
+const rE=mkRng(SEED+55);
+const enemies=[];
+
+function mkEnemy(ex,ey,role,tier,nat,homePort){
+  const ti=TIERS.indexOf(tier);
+  let tk;
+  if(role==='MERCHANT') tk=ti<2?'SLOOP':ti<3?'BRIGANTINE':'GALLEON';
+  else tk=STKEYS[Math.min(~~(ti*1.1+rE()*1.5),STKEYS.length-1)];
+  const s=ST[tk];
+  return{
+    x:ex,y:ey,
+    angle:rE()*Math.PI*2,
+    speed:0,
+    targetAngle:rE()*Math.PI*2,
+    targetX:null,targetY:null, // nav target (like player click)
+    hp:s.hp,maxHp:s.hp,
+    cn:s.cn,rl:s.rl,rng:s.rng,acc:s.acc,
+    bspd:s.spd*(0.8+rE()*0.4),
+    col:s.col,tk,role,tier,ti,
+    beh:BEHAVIOR[role],
+    state:'WANDER',stTimer:0,changeT:300+rE()*500,
+    loot:~~(s.loot*(0.7+rE()*0.6)),xp:s.xp*(1+ti),
+    reloadT:s.rl*rE(), // stagger initial reloads
+    disabled:false,sunk:false,captured:false,
+    wakeP:[],nat:nat||NATS[~~(rE()*NATS.length)],
+    homePort: homePort||null,
+    attackTarget:null, // port this ship is heading to attack
+    turnRate:s.turn,
+  };
+}
+
+function spawnEnemy(forceTier){
+  // Find a sea tile near map edge (fresh spawns arrive from open ocean)
+  for(let att=0;att<200;att++){
+    const side=~~(rE()*4);
+    let ex,ey;
+    if(side===0){ex=~~(rE()*W);ey=2;}
+    else if(side===1){ex=~~(rE()*W);ey=H-3;}
+    else if(side===2){ex=2;ey=~~(rE()*H);}
+    else{ex=W-3;ey=~~(rE()*H);}
+    if(isSail(ex,ey)){
+      const role=ROLES[~~(rE()*ROLES.length)];
+      const era=gameEra;
+      const minTier=Math.max(0,era-1);
+      const ti=forceTier!==undefined?forceTier:Math.min(minTier+~~(rE()*2),4);
+      enemies.push(mkEnemy(ex+0.5,ey+0.5,role,TIERS[ti],null,null));
+      return;
+    }
+  }
+}
+
+// Initial population
+for(let i=0;i<55;i++){
+  let ex,ey,t=0;
+  do{ex=3+~~(rE()*(W-6));ey=3+~~(rE()*(H-6));t++;}
+  while(t<300&&!isSail(ex,ey));
+  if(t>=300)continue;
+  const role=ROLES[~~(rE()*ROLES.length)];
+  const ti=~~(rE()*rE()*3);
+  enemies.push(mkEnemy(ex+0.5,ey+0.5,role,TIERS[ti],null,null));
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CANNONBALLS  — fired from ship SIDES
+// ═══════════════════════════════════════════════════════════
+const CBALL_SPD=0.008; // tiles/ms  — slow enough to see arc
+const cballs=[];
+
+// Fire broadside: angle is the ship's heading, side +1=starboard -1=port
+// Broadsides fire at 90° to heading
+function fireBroadside(fx,fy,shipAngle,targetX,targetY,isP,dmg,rng,cn){
+  // Determine which side faces the target
+  const toTarget=Math.atan2(targetY-fy,targetX-fx);
+  const relAngle=toTarget-shipAngle;
+  const norm=(relAngle%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
+  // Starboard = right of heading (+90°), Port = left (-90°)
+  const side=(norm<Math.PI)?1:-1;
+  const broadsideAngle=shipAngle+side*Math.PI/2;
+  // Spread shots along broadside
+  const shots=Math.max(1,Math.min(cn,5));
+  const spread=0.18;
+  for(let i=0;i<shots;i++){
+    const sa=broadsideAngle+(i-(shots-1)/2)*spread+(Math.random()-0.5)*0.08;
+    cballs.push({
+      x:fx+Math.cos(broadsideAngle)*0.6,
+      y:fy+Math.sin(broadsideAngle)*0.6,
+      vx:Math.cos(sa)*CBALL_SPD,
+      vy:Math.sin(sa)*CBALL_SPD,
+      isP,dmg,dist:0,maxDist:rng,
+      trail:[],
+      fromX:fx,fromY:fy
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PARTICLES
+// ═══════════════════════════════════════════════════════════
+const parts=[];
+function boom(wx,wy,col,n=8){
+  for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=0.025+Math.random()*0.06;
+    parts.push({x:wx,y:wy,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,ml:1,col,sz:2+Math.random()*4});}
+}
+function splash(wx,wy){
+  for(let i=0;i<4;i++){const a=Math.random()*Math.PI*2,s=0.008+Math.random()*0.015;
+    parts.push({x:wx,y:wy,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:0.5,ml:0.5,col:'#88ccff',sz:2});}
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PLAYER
+// ═══════════════════════════════════════════════════════════
+let pST=ST.BRIGANTINE;
+const player={
+  x:W/2,y:H/2,
+  angle:0,speed:0,
+  targetX:null,targetY:null,
+  hp:pST.hp,maxHp:pST.hp,
+  cn:pST.cn,rl:pST.rl,rng:pST.rng,
+  reloadT:0,
+  gold:500,crew:80,fame:0,kills:0,
+  day:1,dayT:0,
+  fleet:[],tk:'BRIGANTINE',
+  wakeP:[],
+  turnRate:pST.turn,
+};
+
+// ═══════════════════════════════════════════════════════════
+//  ENDLESS ERA SYSTEM
+// ═══════════════════════════════════════════════════════════
+let gameEra=0; // 0=Age of Sail, 1=Conflict, 2=War, 3=Chaos, 4=Legendary
+const ERA_NAMES=['AGE OF SAIL','ERA OF CONFLICT','CARIBBEAN WAR','AGE OF CHAOS','LEGENDARY SEAS'];
+const ERA_DAYS=[0,15,35,60,90]; // day thresholds
+let eraShown=false;
+let spawnTimer=0;
+const SPAWN_INTERVAL=25000; // ms between new ship spawns (reduces over time)
+let treasureRespawnTimer=0;
+const TREASURE_RESPAWN=40000; // ms between treasure batch spawns
+let portWarTimer=0;
+const PORT_WAR_CHECK=30000; // ms between port-vs-port war events
+
+// ═══════════════════════════════════════════════════════════
+//  WIND
+// ═══════════════════════════════════════════════════════════
+let wA=Math.random()*Math.PI*2,wS=0.6+Math.random()*0.4,wT=0;
+
+// ═══════════════════════════════════════════════════════════
+//  CAMERA
+// ═══════════════════════════════════════════════════════════
+let camX=player.x-20,camY=player.y-15;
+
+// ═══════════════════════════════════════════════════════════
+//  CANVAS
+// ═══════════════════════════════════════════════════════════
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+ctx.imageSmoothingEnabled=false;
+let WP,HP;
+function resize(){WP=window.innerWidth;HP=window.innerHeight;canvas.width=WP;canvas.height=HP;}
+resize();window.addEventListener('resize',resize);
+
+// Find open-ocean spawn
+{
+  let bd=99999,bx=W/2,by=H/2;
+  for(let y=2;y<H-2;y++)for(let x=2;x<W-2;x++){
+    if(world[y*W+x]===T.DEEP||world[y*W+x]===T.SEA){
+      const d=Math.hypot(x-W/2,y-H/2);if(d<bd){bd=d;bx=x;by=y;}
+    }
+  }
+  player.x=bx+0.5;player.y=by+0.5;
+  camX=player.x-20;camY=player.y-15;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TILE COLOURS
+// ═══════════════════════════════════════════════════════════
+const TC=[
+  ['#1a3a6b','#162d5a','#0f2248'],
+  ['#2255aa','#1f4d99','#2266cc'],
+  ['#2288bb','#3399cc','#44aacc'],
+  ['#d4a830','#c49020','#e0b840'],
+  ['#228833','#1a6622','#339944'],
+  ['#115522','#0d4418','#1a5522'],
+  ['#887744','#776633','#998855'],
+  ['#bbaa99','#aaa088','#ccbbaa'],
+  ['#eeeeff','#ddddff','#ffffff'],
+  ['#cc4422','#ff6644','#dd5533'],
+  ['#1177aa','#0d6688','#1188aa'],
+];
+
+function drawTile(tx,ty,sx,sy){
+  const t=world[ty*W+tx],v=wVar[ty*W+tx];
+  ctx.fillStyle=TC[t][v%3];ctx.fillRect(sx,sy,TILE+1,TILE+1);
+  const now=Date.now();
+  if(t===T.DEEP||t===T.SEA){
+    if((tx+ty+~~(now/1100))%5===0){ctx.fillStyle='rgba(255,255,255,0.06)';ctx.fillRect(sx+2,sy+7,5,1);}
+  } else if(t===T.FOREST){
+    ctx.fillStyle='#0a3310';
+    ctx.fillRect(sx+2+((tx*7+ty*13)%3)*4,sy+2,3,4);
+    ctx.fillRect(sx+9-((tx+ty*3)%3)*2,sy+7,3,4);
+  } else if(t===T.PEAK){
+    ctx.fillStyle='#bbaa99';ctx.beginPath();ctx.moveTo(sx+8,sy+2);ctx.lineTo(sx+14,sy+14);ctx.lineTo(sx+2,sy+14);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.moveTo(sx+8,sy+2);ctx.lineTo(sx+12,sy+8);ctx.lineTo(sx+4,sy+8);ctx.fill();
+  } else if(t===T.PORT){
+    ctx.fillStyle='#ffeecc';ctx.fillRect(sx+2,sy+5,12,7);
+    ctx.fillStyle='#aa3311';ctx.fillRect(sx+2,sy+3,12,4);
+    ctx.fillStyle='#333';ctx.fillRect(sx+7,sy+1,1,6);
+    ctx.fillStyle='#ffcc00';ctx.fillRect(sx+8,sy+1,4,3);
+  } else if(t===T.REEF){
+    ctx.fillStyle='rgba(255,200,50,0.2)';ctx.fillRect(sx+3,sy+3,2,2);ctx.fillRect(sx+10,sy+9,2,2);
+  } else if(t===T.SAND&&(tx*3+ty)%6===0){
+    ctx.fillStyle='rgba(180,140,20,0.18)';ctx.fillRect(sx+4,sy+4,2,2);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DRAW SHIP — broadside cannons on correct sides
+// ═══════════════════════════════════════════════════════════
+function drawShip(sx,sy,ang,col,tk,scale,dis){
+  ctx.save();ctx.translate(sx,sy);ctx.rotate(ang+Math.PI/2);
+  const s=TILE*0.36*scale;
+  // shadow
+  ctx.fillStyle='rgba(0,0,0,0.2)';ctx.fillRect(-s*0.5+1,-s*1.4+1,s,s*2.8);
+  // hull
+  ctx.fillStyle=dis?'#443322':col;
+  ctx.fillRect(-s*0.44,-s*1.28,s*0.88,s*2.56);
+  // bow point
+  ctx.beginPath();ctx.moveTo(0,-s*1.82);ctx.lineTo(-s*0.44,-s*1.28);ctx.lineTo(s*0.44,-s*1.28);ctx.fill();
+  // stern
+  ctx.fillRect(-s*0.54,s*1.1,s*1.08,s*0.5);
+  // waterline
+  ctx.fillStyle='rgba(0,0,0,0.28)';ctx.fillRect(-s*0.44,-s*0.08,s*0.88,s*0.14);
+  // main mast
+  ctx.fillStyle=dis?'#443322':'#ccbbaa';
+  ctx.fillRect(-1.2,-s*1.72,2.4,s*2.4);
+  // main sail
+  if(!dis){
+    ctx.fillStyle='rgba(255,252,220,0.9)';ctx.fillRect(-s*0.54,-s*1.28,s*1.08,s*1.12);
+    // subtle wind belly
+    ctx.fillStyle='rgba(255,255,200,0.12)';
+    ctx.fillRect(-s*0.54+s*0.05,-s*1.28,s*0.98,s*1.12);
+  } else {
+    ctx.fillStyle='rgba(100,80,50,0.45)';ctx.fillRect(-s*0.3,-s*1.1,s*0.4,s*0.65);
+  }
+  // topsail (brigantine+)
+  if(tk!=='SLOOP'&&!dis){
+    ctx.fillStyle='rgba(240,240,200,0.82)';ctx.fillRect(-s*0.28,-s*1.98,s*0.56,s*0.68);
+    ctx.fillStyle='#ccbbaa';ctx.fillRect(-0.8,-s*2.18,1.6,s*0.55);
+  }
+  // second mast (galleon, man-o-war)
+  if((tk==='GALLEON'||tk==='MAN_O_WAR')&&!dis){
+    ctx.fillStyle='#ccbbaa';ctx.fillRect(-0.8,s*0.28,1.6,s*1.4);
+    ctx.fillStyle='rgba(240,240,200,0.75)';ctx.fillRect(-s*0.38,s*0.38,s*0.76,s*0.85);
+  }
+  // BROADSIDE CANNONS on port and starboard sides
+  const nc=tk==='SLOOP'?1:tk==='BRIGANTINE'?2:tk==='FRIGATE'?3:4;
+  ctx.fillStyle='#1a1a1a';
+  for(let i=0;i<nc;i++){
+    const cy=-s*0.8+i*(s*0.55);
+    // port side (left)
+    ctx.fillRect(-s*0.95,cy,s*0.55,s*0.18);
+    // starboard side (right)
+    ctx.fillRect(s*0.40,cy,s*0.55,s*0.18);
+    // barrel openings
+    ctx.fillStyle='#333';
+    ctx.fillRect(-s*0.94,cy+s*0.04,s*0.18,s*0.10);
+    ctx.fillRect(s*0.76,cy+s*0.04,s*0.18,s*0.10);
+    ctx.fillStyle='#1a1a1a';
+  }
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MINIMAP
+// ═══════════════════════════════════════════════════════════
+const mm=document.getElementById('minimap');
+const mc=mm.getContext('2d');
+const MMW=110,MMH=88;
+mm.width=MMW;mm.height=MMH;
+const mmImg=mc.createImageData(MMW,MMH);
+(function(){
+  const C={[T.DEEP]:[26,58,107],[T.SEA]:[34,85,170],[T.SHALLOW]:[51,153,204],[T.SAND]:[212,168,48],[T.GRASS]:[34,136,51],[T.FOREST]:[17,85,34],[T.HILL]:[136,119,68],[T.PEAK]:[187,170,153],[T.SNOW]:[238,238,255],[T.PORT]:[204,68,34],[T.REEF]:[17,119,136]};
+  for(let my=0;my<MMH;my++)for(let mx=0;mx<MMW;mx++){
+    const wx=~~(mx*W/MMW),wy=~~(my*H/MMH),c=C[world[wy*W+wx]]||[0,0,0];
+    const pi=(my*MMW+mx)*4;mmImg.data[pi]=c[0];mmImg.data[pi+1]=c[1];mmImg.data[pi+2]=c[2];mmImg.data[pi+3]=255;
+  }
+  mc.putImageData(mmImg,0,0);
+})();
+function drawMM(){
+  mc.putImageData(mmImg,0,0);
+  for(const p of ports){
+    const mx=~~(p.x*MMW/W),my=~~(p.y*MMH/H);
+    mc.fillStyle=p.rel==='friendly'?'#44ff88':p.rel==='enemy'?'#ff4444':'#ffcc44';
+    mc.fillRect(mx-1,my-1,3,3);
+  }
+  for(const e of enemies){
+    if(e.sunk||e.captured)continue;
+    mc.fillStyle=e.role==='PIRATE'?'#ff44ff':e.role==='WARSHIP'?'#ff8800':e.role==='MERCHANT'?'#88ffaa':'#44aaff';
+    mc.fillRect(~~(e.x*MMW/W),~~(e.y*MMH/H),2,2);
+  }
+  mc.fillStyle='#ffff00';
+  mc.fillRect(~~(player.x*MMW/W)-2,~~(player.y*MMH/H)-2,5,5);
+  mc.strokeStyle='rgba(255,255,100,0.45)';mc.lineWidth=1;
+  mc.strokeRect(~~(camX*MMW/W),~~(camY*MMH/H),~~((WP/TILE)*MMW/W),~~((HP/TILE)*MMH/H));
+}
+
+// ═══════════════════════════════════════════════════════════
+//  HUD
+// ═══════════════════════════════════════════════════════════
+function updateHUD(){
+  document.getElementById('snEl').textContent=player.tk;
+  document.getElementById('gEl').textContent=player.gold;
+  document.getElementById('cEl').textContent=player.crew;
+  document.getElementById('dEl').textContent=player.day;
+  document.getElementById('fEl').textContent=player.fame;
+  document.getElementById('kEl').textContent=player.kills;
+  document.getElementById('flEl').textContent=1+player.fleet.length;
+  document.getElementById('cnEl').textContent=player.cn;
+  document.getElementById('eraEl').textContent='I II III IV V'.split(' ')[Math.min(gameEra,4)];
+  const dirs=['N','NE','E','SE','S','SW','W','NW'];
+  document.getElementById('wdEl').textContent=dirs[~~(wA/(Math.PI/4))&7];
+  document.getElementById('wsEl').textContent='░▒▓'[~~(wS*2.9)];
+  const bar=document.getElementById('hpbar');bar.innerHTML='';
+  for(let i=0;i<player.maxHp;i++){
+    const s=document.createElement('div');
+    s.className='hs'+(i<player.hp?(player.hp/player.maxHp<0.35?' lo':' f'):'');
+    bar.appendChild(s);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LOG
+// ═══════════════════════════════════════════════════════════
+const logDivs=[];
+function addLog(msg,type=''){
+  const d=document.createElement('div');d.className='le '+type;d.textContent=msg;
+  document.getElementById('log').appendChild(d);logDivs.push(d);
+  if(logDivs.length>6){try{document.getElementById('log').removeChild(logDivs.shift());}catch(e){}}
+  setTimeout(()=>{try{document.getElementById('log').removeChild(d);}catch(e){}},5000);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PORT MENU
+// ═══════════════════════════════════════════════════════════
+let aPort=null;
+document.getElementById('pclose').onclick=()=>{document.getElementById('pmenu').style.display='none';aPort=null;};
+function openPort(p){
+  aPort=p;
+  document.getElementById('ptitle').textContent=NFLAG[p.nat]+' '+p.name+' ['+p.rel.toUpperCase()+']';
+  const body=document.getElementById('pbody');body.innerHTML='';
+  const btn=(lbl,cls,fn)=>{const b=document.createElement('button');b.className='mb '+cls;b.textContent=lbl;b.onclick=fn;body.appendChild(b);};
+  if(p.rel==='friendly'){
+    const repairCost=~~(player.maxHp*18);
+    btn('⚓ REPAIR (-'+repairCost+'g, +'+~~(player.maxHp*0.6)+' HP)','g',()=>{
+      if(player.gold>=repairCost){player.gold-=repairCost;player.hp=Math.min(player.maxHp,player.hp+~~(player.maxHp*0.6));addLog('⚓ Repaired at '+p.name,'g');}else addLog('Not enough gold!','r');
+      closePortMenu();
+    });
+    btn('👥 RECRUIT (50g → +10 crew)','g',()=>{
+      if(player.gold>=50){player.gold-=50;player.crew=Math.min(250,player.crew+10);addLog('+10 crew','g');}else addLog('Not enough gold!','r');
+      closePortMenu();
+    });
+    btn('🔫 BUY CANNON (150g each)','y',()=>{
+      if(player.gold>=150){player.gold-=150;player.cn++;addLog('Cannon acquired!','g');}else addLog('Not enough gold!','r');
+      closePortMenu();
+    });
+    btn('💰 SELL PLUNDER (+gold)','y',()=>{
+      const b=150+~~(Math.random()*500);player.gold+=b;addLog('Sold: +'+b+'g','g');closePortMenu();
+    });
+    btn('⚔️ ATTACK THIS PORT','r',()=>{closePortMenu();attackPort(p);});
+  } else if(p.rel==='neutral'){
+    btn('🤝 PAY TRIBUTE (200g → friendly)','y',()=>{
+      if(player.gold>=200){player.gold-=200;p.rel='friendly';addLog(p.name+' now FRIENDLY!','g');}else addLog('Not enough gold!','r');
+      closePortMenu();
+    });
+    btn('⚓ EMERGENCY REPAIR (350g)','gr',()=>{
+      if(player.gold>=350){player.gold-=350;player.hp=Math.min(player.maxHp,player.hp+4);addLog('Emergency repairs','g');}else addLog('Not enough gold!','r');
+      closePortMenu();
+    });
+    btn('⚔️ RAID & LOOT','r',()=>{closePortMenu();attackPort(p);});
+  } else {
+    btn('⚔️ ASSAULT! ('+p.garrison+' garrison)','r',()=>{closePortMenu();attackPort(p);});
+    btn('💨 STAY CLEAR','gr',()=>closePortMenu());
+  }
+  document.getElementById('pmenu').style.display='block';
+}
+function closePortMenu(){document.getElementById('pmenu').style.display='none';aPort=null;}
+
+function attackPort(p){
+  const our=player.cn*(player.hp/player.maxHp)*(0.5+player.crew/200);
+  const their=p.cannons+p.garrison*0.8;
+  const roll=Math.random()*(our)/(our+their+1);
+  addLog('⚔️ ATTACKING '+p.name+'!','r');
+  setTimeout(()=>{
+    if(roll>0.40){
+      player.gold+=p.wealth;player.fame+=60;player.kills++;
+      const oldNat=p.nat;
+      p.nat='PIRATE';p.rel='friendly';
+      p.garrison=~~(p.garrison*0.2);p.wealth=~~(p.wealth*0.1);
+      boom(p.x,p.y,'#ff4400',20);
+      addLog('🏆 '+p.name+' CAPTURED! +'+p.wealth+'g','g');
+    } else {
+      const dmg=2+~~(Math.random()*6);player.hp=Math.max(1,player.hp-dmg);
+      addLog('💀 REPELLED from '+p.name+'! -'+dmg+' HP','r');
+    }
+  },600);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CAPTURE MENU
+// ═══════════════════════════════════════════════════════════
+document.getElementById('cclose').onclick=()=>document.getElementById('cmenu').style.display='none';
+function openCapture(en){
+  if(en.sunk)return;
+  document.getElementById('ctitle').textContent='⚔️ '+en.tk+' DISABLED!';
+  const body=document.getElementById('cbody');body.innerHTML='';
+  const btn=(lbl,cls,fn)=>{const b=document.createElement('button');b.className='mb '+cls;b.textContent=lbl;b.onclick=fn;body.appendChild(b);};
+  btn('💰 LOOT & SINK (+'+en.loot+'g +'+en.xp+' fame)','y',()=>{
+    player.gold+=en.loot;player.kills++;player.fame+=en.xp;
+    boom(en.x,en.y,'#ff6622',20);en.sunk=true;
+    addLog('💰 Looted '+en.tk+': +'+en.loot+'g','g');
+    document.getElementById('cmenu').style.display='none';
+  });
+  btn('⚓ CLAIM PRIZE SHIP (fleet +'+~~(en.loot*0.3)+'g)','g',()=>{
+    player.fleet.push({tk:en.tk});player.fame+=en.xp*4;player.gold+=~~(en.loot*0.3);
+    en.sunk=true;addLog('⚓ '+en.tk+' joins fleet!','g');
+    document.getElementById('cmenu').style.display='none';
+  });
+  btn('🔥 BURN IT (+'+en.xp+' fame)','r',()=>{
+    player.fame+=en.xp;boom(en.x,en.y,'#ff3300',26);en.sunk=true;
+    document.getElementById('cmenu').style.display='none';
+  });
+  document.getElementById('cmenu').style.display='block';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INPUT
+// ═══════════════════════════════════════════════════════════
+let panSt=null,panCm=null,t0=0,x0=0,y0=0,panned=false;
+function pdwn(cx,cy){x0=cx;y0=cy;t0=Date.now();panned=false;panSt={x:cx,y:cy};panCm={x:camX,y:camY};}
+function pmov(cx,cy){
+  if(!panSt)return;
+  if(Math.abs(cx-panSt.x)+Math.abs(cy-panSt.y)>6)panned=true;
+  camX=panCm.x-(cx-panSt.x)/TILE;camY=panCm.y-(cy-panSt.y)/TILE;clamp();
+}
+function pup(cx,cy){
+  if(!panSt)return;
+  if(!panned&&Date.now()-t0<350){
+    const wx=camX+cx/TILE,wy=camY+cy/TILE;
+    let hp=null;for(const p of ports)if(Math.hypot(p.x-wx,p.y-wy)<3){hp=p;break;}
+    if(hp)openPort(hp);
+    else{player.targetX=wx;player.targetY=wy;}
+  }
+  panSt=null;
+}
+canvas.addEventListener('touchstart',e=>{e.preventDefault();const t=e.touches[0];pdwn(t.clientX,t.clientY);},{passive:false});
+canvas.addEventListener('touchmove',e=>{e.preventDefault();const t=e.touches[0];pmov(t.clientX,t.clientY);},{passive:false});
+canvas.addEventListener('touchend',e=>{e.preventDefault();const t=e.changedTouches[0];pup(t.clientX,t.clientY);},{passive:false});
+canvas.addEventListener('mousedown',e=>pdwn(e.clientX,e.clientY));
+canvas.addEventListener('mousemove',e=>{if(e.buttons)pmov(e.clientX,e.clientY);});
+canvas.addEventListener('mouseup',e=>pup(e.clientX,e.clientY));
+function clamp(){camX=Math.max(0,Math.min(W-WP/TILE,camX));camY=Math.max(0,Math.min(H-HP/TILE,camY));}
+
+// ═══════════════════════════════════════════════════════════
+//  ANGLE UTILS
+// ═══════════════════════════════════════════════════════════
+function lerpA(a,b,t){let d=b-a;while(d>Math.PI)d-=Math.PI*2;while(d<-Math.PI)d+=Math.PI*2;return a+d*t;}
+function dst(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
+function angleTo(ax,ay,bx,by){return Math.atan2(by-ay,bx-ax);}
+
+// ═══════════════════════════════════════════════════════════
+//  SHARED SHIP MOVEMENT — used by BOTH player and enemies
+//  Returns true if moved
+// ═══════════════════════════════════════════════════════════
+function moveShip(ship,targetX,targetY,dt,basespd,turnRate,windBonus){
+  const dx=targetX-ship.x,dy=targetY-ship.y,d=Math.hypot(dx,dy);
+  if(d<0.3){ship.speed=0;return false;}
+  // Turn toward target
+  const ta=angleTo(ship.x,ship.y,targetX,targetY);
+  ship.angle=lerpA(ship.angle,ta,turnRate*0.015*dt);
+  // Wind effect: bonus when sailing with wind, penalty against
+  const we=0.55+0.45*Math.cos(ship.angle-wA)*windBonus;
+  const topSpd=basespd*we;
+  ship.speed+=(topSpd-ship.speed)*0.025;
+  const move=Math.min(ship.speed*dt,d);
+  // Obstacle avoidance: look ahead
+  const lookDist=Math.max(1.5,ship.speed*dt*3);
+  const lx=ship.x+Math.cos(ship.angle)*lookDist;
+  const ly=ship.y+Math.sin(ship.angle)*lookDist;
+  if(!isSail(~~lx,~~ly)){
+    // Try to steer around
+    ship.angle+=0.4*(Math.sin(Date.now()*0.001+ship.x)>0?1:-1);
+    ship.speed*=0.4;
+    return false;
+  }
+  const nx=ship.x+Math.cos(ship.angle)*move;
+  const ny=ship.y+Math.sin(ship.angle)*move;
+  if(isSail(~~nx,~~ny)){ship.x=nx;ship.y=ny;return true;}
+  ship.speed*=0.2;ship.angle+=0.35;return false;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PLAYER UPDATE
+// ═══════════════════════════════════════════════════════════
+function updatePlayer(dt){
+  player.reloadT=Math.max(0,player.reloadT-dt);
+  player.dayT+=dt;
+  if(player.dayT>12000){player.dayT=0;player.day++;}
+
+  if(player.targetX!==null){
+    const moved=moveShip(player,player.targetX,player.targetY,dt*SPD_SCALE,ST[player.tk].spd,ST[player.tk].turn,1.0);
+    const d=Math.hypot(player.targetX-player.x,player.targetY-player.y);
+    if(d<0.3){player.targetX=null;player.speed=0;}
+    if(moved){
+      // Smooth camera follow
+      camX+=(player.x-WP/TILE/2-camX)*0.07;
+      camY+=(player.y-HP/TILE/2-camY)*0.07;clamp();
+      player.wakeP.unshift({x:player.x,y:player.y});
+      if(player.wakeP.length>25)player.wakeP.pop();
+    }
+  }
+
+  // AUTO-FIRE BROADSIDE at nearest enemy in range
+  if(player.reloadT<=0){
+    let near=null,nd=player.rng;
+    for(const e of enemies){
+      if(e.sunk||e.disabled||e.captured)continue;
+      const d=dst(player,e);if(d<nd){nd=d;near=e;}
+    }
+    if(near){
+      fireBroadside(player.x,player.y,player.angle,near.x,near.y,true,2,player.rng,Math.min(player.cn,5));
+      player.reloadT=ST[player.tk].rl;
+    }
+  }
+
+  // Treasure pickup
+  for(const t of treas){
+    if(!t.l&&Math.hypot(t.x+0.5-player.x,t.y+0.5-player.y)<1.8){
+      player.gold+=t.g;t.l=true;boom(t.x+0.5,t.y+0.5,'#ffdd00',14);
+      addLog('💰 TREASURE: +'+t.g+'g!','g');
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ENEMY AI — full ship behavior, mirrors player
+// ═══════════════════════════════════════════════════════════
+function updateEnemies(dt){
+  for(const en of enemies){
+    if(en.sunk||en.captured)continue;
+    en.reloadT=Math.max(0,en.reloadT-dt);
+    if(en.disabled){
+      // Drift and slow to a stop
+      en.speed=Math.max(0,en.speed*0.96);
+      en.x+=Math.cos(en.angle)*en.speed*dt*SPD_SCALE;
+      en.y+=Math.sin(en.angle)*en.speed*dt*SPD_SCALE;
+      continue;
+    }
+
+    const dpP=dst(en,player);
+    const beh=en.beh;
+    const shouldFlee=en.hp/en.maxHp<beh.flee;
+
+    // ── State machine ──
+    en.stTimer+=dt;
+    if(shouldFlee){
+      en.state='FLEE';
+    } else if(dpP<12&&beh.aggro>0&&Math.random()<beh.aggro*0.002*dt){
+      en.state='CHASE';en.stTimer=0;
+    } else if(en.attackTarget){
+      en.state='PORT_ATTACK';
+    } else if(en.state==='CHASE'&&en.stTimer>8000){
+      en.state='WANDER';
+    } else if(en.state==='WANDER'){
+      // pick new wander target periodically
+      en.changeT-=dt;
+      if(en.changeT<0){
+        en.changeT=3000+Math.random()*4000;
+        // find a random sea point to sail toward
+        for(let a=0;a<20;a++){
+          const wx=en.x+(Math.random()-0.5)*30,wy=en.y+(Math.random()-0.5)*30;
+          if(isSail(~~wx,~~wy)){en.targetX=wx;en.targetY=wy;break;}
+        }
+      }
+    }
+
+    // ── Movement & firing ──
+    let navX=en.targetX||en.x+(Math.cos(en.angle)*5);
+    let navY=en.targetY||en.y+(Math.sin(en.angle)*5);
+
+    if(en.state==='FLEE'){
+      navX=en.x+(en.x-player.x)*3;navY=en.y+(en.y-player.y)*3;
+    } else if(en.state==='CHASE'){
+      if(dpP>en.rng*0.7){
+        // Close distance
+        navX=player.x;navY=player.y;
+      } else {
+        // In range — circle strafe for broadsides!
+        // Navigate to a position 90° off from target so sides face them
+        const perpAngle=angleTo(en.x,en.y,player.x,player.y)+Math.PI*0.5;
+        navX=player.x+Math.cos(perpAngle)*(en.rng*0.6);
+        navY=player.y+Math.sin(perpAngle)*(en.rng*0.6);
+      }
+      // FIRE when broadside angle is good
+      if(dpP<en.rng&&en.reloadT<=0){
+        fireBroadside(en.x,en.y,en.angle,player.x,player.y,false,1+en.ti*0.4,en.rng,Math.min(en.cn,5));
+        en.reloadT=en.rl;
+      }
+    } else if(en.state==='PORT_ATTACK'){
+      const ap=en.attackTarget;
+      const dpPort=dst(en,ap);
+      if(dpPort<4){
+        // Attack the port
+        portUnderAttack(ap,en);
+        en.attackTarget=null;en.state='WANDER';
+      } else {
+        navX=ap.x;navY=ap.y;
+      }
+    }
+
+    const moved=moveShip(en,navX,navY,dt*SPD_SCALE,en.bspd,en.turnRate,0.9);
+    if(moved){en.wakeP.unshift({x:en.x,y:en.y});if(en.wakeP.length>16)en.wakeP.pop();}
+
+    // ── Enemy vs Enemy ──
+    if(en.reloadT<=0){
+      for(const o of enemies){
+        if(o===en||o.sunk||o.disabled)continue;
+        const hostile=(en.role==='PIRATE'&&o.role==='MERCHANT')||(en.role==='WARSHIP'&&o.role==='PIRATE')||(en.role==='PIRATE'&&o.role==='WARSHIP'&&Math.random()<0.3);
+        if(!hostile)continue;
+        const d2=dst(en,o);
+        if(d2<en.rng*0.8){
+          fireBroadside(en.x,en.y,en.angle,o.x,o.y,false,0.8,en.rng,2);
+          en.reloadT=en.rl;break;
+        }
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PORT WAR SYSTEM — ports send fleets to attack each other
+// ═══════════════════════════════════════════════════════════
+function portUnderAttack(port,attacker){
+  const aPow=attacker.cn*(attacker.hp/attacker.maxHp);
+  const dPow=port.cannons+port.garrison*0.6;
+  const roll=Math.random()*aPow/(aPow+dPow+1);
+  if(roll>0.38){
+    const oldNat=port.nat;
+    port.nat=attacker.nat;
+    port.rel=port.nat==='PIRATE'?'neutral':'enemy';
+    port.garrison=~~(port.garrison*0.3);
+    port.wealth=~~(port.wealth*0.2);
+    addLog('⚔️ '+port.name+' falls to '+NFLAG[attacker.nat]+'!','o');
+    boom(port.x,port.y,'#ff4400',18);
+  } else {
+    attacker.hp-=2+~~(Math.random()*3);
+    if(attacker.hp<=0)attacker.sunk=true;
+    addLog(port.name+' repelled attack!','b');
+  }
+}
+
+function updatePortWars(dt){
+  portWarTimer+=dt;
+  if(portWarTimer<PORT_WAR_CHECK)return;
+  portWarTimer=0;
+  // Each nation picks an enemy port and sends a warship to attack it
+  if(Math.random()>0.4)return; // 60% chance each interval
+  const attPort=ports[~~(Math.random()*ports.length)];
+  const defPort=ports[~~(Math.random()*ports.length)];
+  if(!attPort||!defPort||attPort===defPort)return;
+  if(attPort.nat===defPort.nat)return;
+  // Spawn a warship from attacker port heading to defender
+  const spawnX=attPort.x+(Math.random()-0.5)*3;
+  const spawnY=attPort.y+(Math.random()-0.5)*3;
+  // make sure spawn is on water
+  for(let a=0;a<20;a++){
+    const sx=attPort.x+~~((Math.random()-0.5)*6);
+    const sy=attPort.y+~~((Math.random()-0.5)*6);
+    if(isSail(sx,sy)){
+      const tier=Math.min(1+gameEra,4);
+      const warship=mkEnemy(sx+0.5,sy+0.5,'WARSHIP',TIERS[tier],attPort.nat,attPort);
+      warship.attackTarget=defPort;
+      warship.state='PORT_ATTACK';
+      enemies.push(warship);
+      addLog(NFLAG[attPort.nat]+' fleet sails for '+defPort.name+'!','o');
+      break;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CANNONBALL UPDATE
+// ═══════════════════════════════════════════════════════════
+function updateCballs(dt){
+  for(let i=cballs.length-1;i>=0;i--){
+    const b=cballs[i];
+    b.trail.push({x:b.x,y:b.y});if(b.trail.length>10)b.trail.shift();
+    b.x+=b.vx*dt;b.y+=b.vy*dt;
+    b.dist+=Math.hypot(b.vx,b.vy)*dt;
+    if(!isSail(~~b.x,~~b.y)){splash(b.x,b.y);cballs.splice(i,1);continue;}
+    if(b.dist>b.maxDist){cballs.splice(i,1);continue;}
+    // Hit player
+    if(!b.isP&&Math.hypot(b.x-player.x,b.y-player.y)<0.65){
+      player.hp=Math.max(0,player.hp-b.dmg);
+      boom(player.x,player.y,'#ff6622',9);addLog('💥 HIT! -'+~~b.dmg+' HP','r');
+      cballs.splice(i,1);
+      if(player.hp<=0)addLog('☠️ SHIP SUNK! Reload to continue','r');
+      continue;
+    }
+    // Player cannonball hits enemy
+    if(b.isP){
+      let hit=false;
+      for(const e of enemies){
+        if(e.sunk||e.captured)continue;
+        if(Math.hypot(b.x-e.x,b.y-e.y)<0.7){
+          e.hp-=b.dmg;boom(e.x,e.y,'#ff8822',7);
+          if(e.hp<=0&&!e.disabled){
+            e.disabled=true;e.speed=0;
+            addLog('🎯 '+e.tk+' DISABLED!','g');
+            setTimeout(()=>openCapture(e),500);
+          }
+          hit=true;break;
+        }
+      }
+      if(hit){cballs.splice(i,1);continue;}
+    }
+    // Enemy cannonball hits other enemies
+    if(!b.isP){
+      for(const e of enemies){
+        if(e.sunk||e.disabled)continue;
+        if(Math.hypot(b.x-e.x,b.y-e.y)<0.6){
+          e.hp-=b.dmg*0.5;
+          if(e.hp<=0){e.disabled=true;boom(e.x,e.y,'#ff8822',6);}
+          cballs.splice(i,1);break;
+        }
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PARTICLES
+// ═══════════════════════════════════════════════════════════
+function updateParts(dt){
+  for(let i=parts.length-1;i>=0;i--){
+    const p=parts[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=0.97;p.vy*=0.97;p.life-=dt*0.0015;
+    if(p.life<=0)parts.splice(i,1);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  WIND
+// ═══════════════════════════════════════════════════════════
+function updateWind(dt){
+  wT+=dt;if(wT>18000+Math.random()*12000){wT=0;wA+=(Math.random()-0.5)*Math.PI*0.8;wS=0.35+Math.random()*0.75;}
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ENDLESS PROGRESSION
+// ═══════════════════════════════════════════════════════════
+function updateProgression(dt){
+  // Era upgrade
+  const newEra=ERA_DAYS.filter(d=>player.day>=d).length-1;
+  if(newEra>gameEra){
+    gameEra=newEra;
+    const el=document.getElementById('era');
+    document.getElementById('eraTxt').textContent='⚓ '+ERA_NAMES[Math.min(gameEra,4)]+' ⚓';
+    el.style.display='block';
+    addLog('🌊 '+ERA_NAMES[Math.min(gameEra,4)],'o');
+    setTimeout(()=>{el.style.display='none';},3000);
+  }
+  // Spawn ships over time (faster in later eras)
+  spawnTimer+=dt;
+  const interval=Math.max(8000,SPAWN_INTERVAL-gameEra*4000);
+  if(spawnTimer>interval){
+    spawnTimer=0;
+    const count=enemies.filter(e=>!e.sunk&&!e.captured).length;
+    if(count<80+gameEra*10){
+      spawnEnemy();
+      // Extra spawns in later eras
+      if(gameEra>=2&&Math.random()<0.5)spawnEnemy();
+      if(gameEra>=3&&Math.random()<0.4)spawnEnemy(Math.min(gameEra,4));
+    }
+  }
+  // Respawn treasures
+  treasureRespawnTimer+=dt;
+  if(treasureRespawnTimer>TREASURE_RESPAWN){
+    treasureRespawnTimer=0;
+    const unlootedCount=treas.filter(t=>!t.l).length;
+    if(unlootedCount<20){
+      spawnTreasure(8+gameEra*2);
+      addLog('💰 New treasures spotted!','b');
+    }
+  }
+  // Port wars
+  updatePortWars(dt);
+  // Remove sunk ships from array when too many
+  if(enemies.length>200){
+    let removed=0;
+    for(let i=enemies.length-1;i>=0&&removed<50;i--){
+      if(enemies[i].sunk){enemies.splice(i,1);removed++;}
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════════
+function render(){
+  ctx.fillStyle='#0a0e1a';ctx.fillRect(0,0,WP,HP);
+  const x0=~~camX,y0=~~camY;
+  const x1=Math.min(~~(camX+WP/TILE)+3,W),y1=Math.min(~~(camY+HP/TILE)+3,H);
+  // Tiles
+  for(let ty=y0;ty<y1;ty++)for(let tx=x0;tx<x1;tx++){
+    if(tx<0||ty<0)continue;
+    drawTile(tx,ty,~~((tx-camX)*TILE),~~((ty-camY)*TILE));
+  }
+  // Treasures
+  for(const t of treas){
+    if(t.l||t.x<x0||t.x>=x1||t.y<y0||t.y>=y1)continue;
+    const tsx=(t.x+0.5-camX)*TILE,tsy=(t.y+0.5-camY)*TILE;
+    const p=0.5+Math.sin(Date.now()*0.004+t.x)*0.5;
+    ctx.globalAlpha=0.65+p*0.35;
+    ctx.fillStyle='#ffdd00';ctx.fillRect(tsx-5,tsy-5,10,10);
+    ctx.fillStyle='#fff';ctx.fillRect(tsx-2,tsy-2,4,4);
+    ctx.globalAlpha=1;
+    ctx.font='9px serif';ctx.textAlign='center';ctx.fillText('💰',tsx,tsy+12);
+  }
+  // Wakes
+  function drawWake(pts,alpha,lw){
+    if(pts.length<2)return;
+    ctx.strokeStyle='rgba(160,210,255,'+alpha+')';ctx.lineWidth=lw;ctx.beginPath();
+    for(let i=0;i<pts.length;i++){
+      const p=pts[i],wx=(p.x-camX)*TILE,wy=(p.y-camY)*TILE;
+      if(i===0)ctx.moveTo(wx,wy);else ctx.lineTo(wx,wy);
+    }ctx.stroke();
+  }
+  for(const en of enemies){if(!en.sunk)drawWake(en.wakeP,0.18,1.5);}
+  drawWake(player.wakeP,0.3,2.5);
+  // Enemy ships
+  for(const en of enemies){
+    if(en.sunk)continue;
+    if(en.x<x0-2||en.x>x1+2||en.y<y0-2||en.y>y1+2)continue;
+    const esx=(en.x-camX)*TILE,esy=(en.y-camY)*TILE;
+    if(en.hp<en.maxHp){
+      const bw=TILE*1.4;ctx.fillStyle='#1a1a2a';ctx.fillRect(esx-bw/2,esy-TILE*1.45,bw,3);
+      ctx.fillStyle=en.hp/en.maxHp>0.5?'#44ff66':'#ff4422';
+      ctx.fillRect(esx-bw/2,esy-TILE*1.45,bw*en.hp/en.maxHp,3);
+    }
+    drawShip(esx,esy,en.angle,en.col,en.tk,0.9,en.disabled);
+    ctx.font='5px "Press Start 2P"';ctx.textAlign='center';
+    const lc=en.role==='PIRATE'?'#ff88ff':en.role==='MERCHANT'?'#88ffaa':en.role==='WARSHIP'?'#ffaa44':'#aaccff';
+    ctx.fillStyle=lc;ctx.fillText(en.tk,esx,esy-TILE*1.65);
+    if(en.disabled){ctx.fillStyle='#ff5544';ctx.fillText('DISABLED',esx,esy-TILE*2.05);}
+    ctx.fillStyle='#ffcc00';ctx.fillText('★'.repeat(en.ti+1),esx,esy+TILE*1.8);
+    ctx.font='9px serif';ctx.fillText(NFLAG[en.nat],esx-TILE*1.15,esy-TILE*1.3);
+  }
+  // Player glow
+  const psx=(player.x-camX)*TILE,psy=(player.y-camY)*TILE;
+  ctx.save();ctx.globalAlpha=0.09+Math.sin(Date.now()*0.003)*0.04;
+  ctx.fillStyle='#ffffaa';ctx.fillRect(psx-18,psy-18,36,36);ctx.restore();
+  drawShip(psx,psy,player.angle,ST[player.tk].col,player.tk,1.05,false);
+  // Navigation target
+  if(player.targetX!==null){
+    const tsx=(player.targetX-camX)*TILE,tsy=(player.targetY-camY)*TILE;
+    ctx.strokeStyle='rgba(255,220,60,0.3)';ctx.lineWidth=1;ctx.setLineDash([3,7]);
+    ctx.beginPath();ctx.moveTo(psx,psy);ctx.lineTo(tsx,tsy);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='rgba(255,220,60,0.55)';ctx.fillRect(tsx-3,tsy-3,6,6);
+    const ea=Math.atan2(tsy-psy,tsx-psx);
+    ctx.save();ctx.translate(tsx,tsy);ctx.rotate(ea);
+    ctx.fillStyle='rgba(255,220,60,0.6)';ctx.beginPath();ctx.moveTo(7,0);ctx.lineTo(-4,-4);ctx.lineTo(-4,4);ctx.fill();
+    ctx.restore();
+  }
+  // Cannonballs
+  for(const b of cballs){
+    if(b.trail.length>1){
+      ctx.strokeStyle=b.isP?'rgba(255,220,50,0.45)':'rgba(255,80,80,0.4)';
+      ctx.lineWidth=1.5;ctx.beginPath();
+      for(let i=0;i<b.trail.length;i++){
+        const p=b.trail[i],bx=(p.x-camX)*TILE,by=(p.y-camY)*TILE;
+        if(i===0)ctx.moveTo(bx,by);else ctx.lineTo(bx,by);
+      }ctx.stroke();
+    }
+    const bx=(b.x-camX)*TILE,by=(b.y-camY)*TILE;
+    ctx.fillStyle=b.isP?'#ffee44':'#ff5533';
+    ctx.beginPath();ctx.arc(bx,by,2.5,0,Math.PI*2);ctx.fill();
+  }
+  // Particles
+  for(const p of parts){
+    const px=(p.x-camX)*TILE,py=(p.y-camY)*TILE;
+    ctx.globalAlpha=p.life/p.ml;ctx.fillStyle=p.col;
+    ctx.fillRect(px-p.sz/2,py-p.sz/2,p.sz,p.sz);
+  }ctx.globalAlpha=1;
+  // Port labels
+  ctx.font='5px "Press Start 2P"';ctx.textAlign='center';
+  for(const p of ports){
+    if(p.x<x0-3||p.x>x1+3||p.y<y0-3||p.y>y1+3)continue;
+    const ppx=(p.x-camX)*TILE+8,ppy=(p.y-camY)*TILE-6;
+    const lc=p.rel==='friendly'?'#44ff88':p.rel==='enemy'?'#ff5544':'#ffcc44';
+    ctx.fillStyle='rgba(0,0,0,0.82)';ctx.fillRect(ppx-30,ppy-7,60,10);
+    ctx.fillStyle=lc;ctx.fillText(NFLAG[p.nat]+' '+p.name,ppx,ppy);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MAIN LOOP
+// ═══════════════════════════════════════════════════════════
+let lastTs=0;
+function loop(ts){
+  const dt=Math.min(ts-lastTs,50);lastTs=ts;
+  updateWind(dt);
+  updatePlayer(dt);
+  updateEnemies(dt);
+  updateCballs(dt);
+  updateParts(dt);
+  updateProgression(dt);
+  render();updateHUD();drawMM();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(ts=>{lastTs=ts;loop(ts);});
+addLog('⚓ PIRATES! THE CARIBBEAN','b');
+addLog('TAP TO SET SAIL','b');
+addLog('BROADSIDE CANNONS AUTO-FIRE 🔫','g');
+setTimeout(()=>addLog('TAP PORTS TO TRADE OR ATTACK','b'),2500);
+setTimeout(()=>addLog('💰 SEEK TREASURE ON BEACHES!','g'),5000);
+</script>
+
+</body>
+</html>
