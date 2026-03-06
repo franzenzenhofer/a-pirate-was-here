@@ -4,14 +4,14 @@ import type { EnemyShip } from '../core/types';
 import type { GameState } from '../sim/state/game-state';
 import { moveShip } from '../sim/nav/movement';
 import { fireBroadside } from '../sim/combat/naval';
-import { updateCannonball, createExplosion, createSplash, updateParticles } from '../sim/combat/damage';
+import { createExplosion, updateParticles } from '../sim/combat/damage';
+import { updateCballs } from './cballs';
 import { updateAIState, getAINavTarget, shouldFireAtPlayer, shouldFireAtEnemy, hasReachedPortTarget } from '../sim/ai/strategy';
 import { updateProgression, portUnderAttack } from '../sim/state/progression';
 import { crewWagesPerDay } from '../config/economy';
 import { followTarget } from '../renderer/camera';
 import type { Camera } from '../renderer/camera';
 import { updateWind } from '../sim/nav/wind';
-import { openCaptureMenu } from '../renderer/canvas/menus';
 import { addLog } from '../renderer/canvas/log';
 
 export function updateGame(gs: GameState, cam: Camera, dt: number, renderFn: () => void): void {
@@ -46,7 +46,7 @@ function updatePlayer(gs: GameState, cam: Camera, dt: number): void {
       player.targetX = null; player.targetY = null; player.speed = 0;
     }
     if (moved) {
-      followTarget(cam, player.x, player.y, 0.07);
+      followTarget(cam, player.x, player.y, 0.12);
       player.wakePoints.unshift({ x: player.x, y: player.y });
       if (player.wakePoints.length > 25) player.wakePoints.pop();
     }
@@ -123,7 +123,8 @@ function fireEnemyWeapons(gs: GameState, en: EnemyShip): void {
   }
   if (en.reloadT <= 0) {
     for (const o of gs.enemies) {
-      if (o === en) continue;
+      if (o === en || o.sunk || o.disabled) continue;
+      if (Math.hypot(en.x - o.x, en.y - o.y) > 12) continue;
       if (shouldFireAtEnemy(en, o)) {
         gs.cannonballs.push(...fireBroadside(en.x, en.y, en.angle, o.x, o.y, false, 0.8, en.rng, 2));
         en.reloadT = en.rl; break;
@@ -132,36 +133,3 @@ function fireEnemyWeapons(gs: GameState, en: EnemyShip): void {
   }
 }
 
-export function updateCballs(gs: GameState, dt: number): void {
-  for (let i = gs.cannonballs.length - 1; i >= 0; i--) {
-    const b = gs.cannonballs[i]!;
-    const result = updateCannonball(b, dt, gs.player, gs.enemies, gs.world.tiles);
-    if (result.type === 'splash') { gs.particles.push(...createSplash(b.x, b.y)); gs.cannonballs.splice(i, 1); }
-    else if (result.type === 'miss' && b.dist > b.maxDist) { gs.cannonballs.splice(i, 1); }
-    else if (result.type === 'player_hit') {
-      gs.player.hp = Math.max(0, gs.player.hp - result.dmg);
-      gs.particles.push(...createExplosion(gs.player.x, gs.player.y, '#ff6622', 9));
-      addLog('💥 HIT! -' + ~~result.dmg + ' HP', 'r'); gs.cannonballs.splice(i, 1);
-      if (gs.player.hp <= 0) addLog('☠️ SHIP SUNK! Reload to continue', 'r');
-    } else if ((result.type === 'enemy_hit' || result.type === 'enemy_disabled') && result.target) {
-      result.target.hp -= result.dmg;
-      gs.particles.push(...createExplosion(result.target.x, result.target.y, '#ff8822', 7));
-      gs.cannonballs.splice(i, 1);
-      if (result.type === 'enemy_disabled') {
-        result.target.disabled = true; result.target.speed = 0;
-        addLog('🎯 ' + result.target.tk + ' DISABLED!', 'g');
-        const ref = result.target;
-        setTimeout(() => {
-          gs.paused = true;
-          openCaptureMenu(ref, gs.player, addLog, (e) => {
-            gs.particles.push(...createExplosion(e.x, e.y, '#ff6622', 20)); gs.paused = false;
-          });
-        }, 500);
-      }
-    } else if (result.type === 'friendly_fire' && result.target) {
-      result.target.hp -= result.dmg;
-      if (result.target.hp <= 0) { result.target.disabled = true; gs.particles.push(...createExplosion(result.target.x, result.target.y, '#ff8822', 6)); }
-      gs.cannonballs.splice(i, 1);
-    }
-  }
-}

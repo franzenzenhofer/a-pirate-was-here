@@ -20,6 +20,10 @@ import { createKeyState, setupKeyboardListeners, applyKeyboardNav } from '../inp
 import { startLoop } from './loop';
 import { updateGame } from './update';
 import { renderGame } from './render';
+import { mountDebugAPI, logAITransition, logEvent, updatePerfStats } from './debug';
+import { startDebugPush } from './debug-push';
+import { setAITransitionLogger } from '../sim/ai/strategy';
+import { setLogHook } from '../renderer/canvas/log';
 
 // Canvas
 const canvas = document.getElementById('c') as HTMLCanvasElement;
@@ -131,19 +135,27 @@ function attackPort(p: typeof ports[number]): void {
   }, 600);
 }
 
-// Game loop
+// Debug API + HTTP endpoints
+setAITransitionLogger(logAITransition);
+setLogHook(logEvent);
+mountDebugAPI(gs, cam);
+startDebugPush(gs, cam);
+
+// Game loop — throttle secondary renders
+let frameN = 0;
 startLoop((dt) => {
-  // Keyboard navigation
+  frameN++;
+  updatePerfStats();
   applyKeyboardNav(keys, player, cam);
-  // Morale
   const moraleMsg = updateMorale(morale, player, dt);
   if (moraleMsg) addLog(moraleMsg, 'r');
-  // Game update + render
   updateGame(gs, cam, dt, () => {
     renderGame(ctx, gs, cam, WP, HP);
-    updateHUD(player, gs.era, wind);
-    drawMinimap(mmCtx, ports, enemies, player, cam);
-    drawCompass(compCtx, wind);
+    if (frameN % 4 === 0) {
+      updateHUD(player, gs.era, wind);
+      drawMinimap(mmCtx, ports, enemies, player, cam);
+      drawCompass(compCtx, wind);
+    }
   });
 });
 

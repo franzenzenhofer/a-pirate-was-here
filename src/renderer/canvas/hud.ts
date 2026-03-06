@@ -24,10 +24,15 @@ function setText(id: string, text: string): void {
   if (el) el.textContent = text;
 }
 
+let lastHp = -1;
+let lastMaxHp = -1;
+
 function updateHealthBar(hp: number, maxHp: number): void {
+  if (hp === lastHp && maxHp === lastMaxHp) return;
+  lastHp = hp; lastMaxHp = maxHp;
   const bar = document.getElementById('hpbar');
   if (!bar) return;
-  bar.innerHTML = '';
+  while (bar.firstChild) bar.removeChild(bar.firstChild);
   for (let i = 0; i < maxHp; i++) {
     const s = document.createElement('div');
     const isFilled = i < hp;

@@ -95,14 +95,18 @@ export function updateCannonball(
   return { type: 'miss', dmg: 0 };
 }
 
-/** Update particles, returns those still alive */
+/** Update particles in-place, returns same array with dead particles removed */
 export function updateParticles(parts: Particle[], dt: number): Particle[] {
-  for (const p of parts) {
+  let write = 0;
+  for (let i = 0; i < parts.length; i++) {
+    const p = parts[i]!;
     p.x += p.vx * dt;
     p.y += p.vy * dt;
     p.vx *= 0.97;
     p.vy *= 0.97;
     p.life -= dt * 0.0015;
+    if (p.life > 0) { parts[write++] = p; }
   }
-  return parts.filter(p => p.life > 0);
+  parts.length = write;
+  return parts;
 }

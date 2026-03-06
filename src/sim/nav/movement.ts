@@ -23,17 +23,17 @@ export function moveShip(
   const d = Math.hypot(dx, dy);
   if (d < 0.3) { ship.speed = 0; return false; }
 
-  // Turn toward target — IMPROVED: faster response, eased turning
+  // Turn toward target — responsive, dt-scaled
   const ta = angleTo(ship.x, ship.y, targetX, targetY);
-  const turnFactor = turnRate * 0.02 * dt; // 33% faster than original 0.015
-  ship.angle = lerpAngle(ship.angle, ta, Math.min(turnFactor, 0.35));
+  const turnFactor = turnRate * 1.4 * dt;
+  ship.angle = lerpAngle(ship.angle, ta, Math.min(turnFactor, 0.4));
 
-  // Wind effect
+  // Wind effect with minimum speed floor
   const we = windModifier(ship.angle, windAngle, windBonus);
   const topSpd = baseSpeed * we;
 
-  // IMPROVED: faster acceleration for more responsive feel
-  ship.speed += (topSpd - ship.speed) * 0.04; // was 0.025
+  // Snappy acceleration
+  ship.speed += (topSpd - ship.speed) * 0.09;
 
   const move = Math.min(ship.speed * dt, d);
 

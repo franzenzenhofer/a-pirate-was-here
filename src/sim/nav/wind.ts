@@ -34,7 +34,7 @@ export function windStrBar(strength: number): string {
   return '░▒▓'[~~(strength * 2.9)] ?? '░';
 }
 
-/** Calculate wind speed modifier for a given ship angle */
+/** Calculate wind speed modifier for a given ship angle (min 35% speed) */
 export function windModifier(shipAngle: number, windAngle: number, bonus: number): number {
-  return 0.55 + 0.45 * Math.cos(shipAngle - windAngle) * bonus;
+  return Math.max(0.35, 0.55 + 0.45 * Math.cos(shipAngle - windAngle) * bonus);
 }

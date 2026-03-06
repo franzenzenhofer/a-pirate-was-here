@@ -20,9 +20,14 @@ export function renderGame(
   drawMap(ctx, cam, gs.world.tiles, gs.world.variation);
   drawTreasures(ctx, gs.treasures, cam);
 
-  // Wakes
+  // Wakes — only draw for on-screen enemies
+  const wakeMargin = 3;
+  const wx0 = cam.x - wakeMargin, wy0 = cam.y - wakeMargin;
+  const wx1 = cam.x + screenW / TILE_PX + wakeMargin;
+  const wy1 = cam.y + screenH / TILE_PX + wakeMargin;
   for (const en of gs.enemies) {
-    if (!en.sunk) drawWake(ctx, en.wakePoints, cam.x, cam.y, 0.18, 1.5);
+    if (en.sunk || en.x < wx0 || en.x > wx1 || en.y < wy0 || en.y > wy1) continue;
+    drawWake(ctx, en.wakePoints, cam.x, cam.y, 0.18, 1.5);
   }
   drawWake(ctx, gs.player.wakePoints, cam.x, cam.y, 0.3, 2.5);
 
@@ -41,11 +46,10 @@ export function renderGame(
   const player = gs.player;
   const psx = (player.x - cam.x) * TILE_PX;
   const psy = (player.y - cam.y) * TILE_PX;
-  ctx.save();
-  ctx.globalAlpha = 0.09 + Math.sin(Date.now() * 0.003) * 0.04;
+  ctx.globalAlpha = 0.1;
   ctx.fillStyle = '#ffffaa';
   ctx.fillRect(psx - 18, psy - 18, 36, 36);
-  ctx.restore();
+  ctx.globalAlpha = 1;
   drawShip(ctx, psx, psy, player.angle, SHIP_TYPES[player.tk]?.col ?? '#44aaff', player.tk, 1.05, false);
 
   // Nav target

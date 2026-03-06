@@ -5,6 +5,20 @@ import { isSail } from '../world/gen';
 /** Vision range — AI only reacts to what it can "see" (fog of war) */
 const VISION_RANGE = 18;
 
+/** Optional AI transition logger — set by debug module */
+export let onAITransition: ((en: EnemyShip, from: string, to: string, reason: string) => void) | null = null;
+
+export function setAITransitionLogger(fn: typeof onAITransition): void {
+  onAITransition = fn;
+}
+
+function transition(en: EnemyShip, to: string, reason: string): void {
+  const from = en.state;
+  if (from === to) return;
+  en.state = to;
+  if (onAITransition) onAITransition(en, from, to, reason);
+}
+
 /**
  * AI Strategy — decides what the enemy should do each frame.
  * AI uses the SAME movement and combat as the player.
@@ -26,16 +40,16 @@ export function updateAIState(
 
   // State transitions — only chase if AI can SEE the player
   if (shouldFlee && canSeePlayer) {
-    en.state = 'FLEE';
+    transition(en, 'FLEE', 'hp=' + ~~(en.hp / en.maxHp * 100) + '% < flee=' + ~~(en.beh.flee * 100) + '%');
   } else if (shouldFlee && en.state === 'FLEE' && !canSeePlayer) {
-    en.state = 'WANDER'; // Lost sight, stop fleeing
+    transition(en, 'WANDER', 'lost sight while fleeing');
   } else if (canSeePlayer && dpP < 12 && en.beh.aggro > 0 && Math.random() < en.beh.aggro * 0.002 * dt) {
-    en.state = 'CHASE';
+    transition(en, 'CHASE', 'spotted player d=' + ~~dpP + ' aggro=' + ~~(en.beh.aggro * 100) + '%');
     en.stTimer = 0;
   } else if (en.attackTarget) {
-    en.state = 'PORT_ATTACK';
+    transition(en, 'PORT_ATTACK', 'target=' + en.attackTarget.name);
   } else if (en.state === 'CHASE' && (en.stTimer > 8000 || !canSeePlayer)) {
-    en.state = 'WANDER'; // Lost sight or chase timeout
+    transition(en, 'WANDER', en.stTimer > 8000 ? 'chase timeout' : 'lost sight');
   }
 
   // Wander: pick new random sea target periodically
