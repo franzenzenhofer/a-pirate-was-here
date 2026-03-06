@@ -8,6 +8,8 @@ import { portUnderAttack } from '../sim/state/progression';
 import { createExplosion } from '../sim/combat/damage';
 import { addLog } from '../renderer/canvas/log';
 import { nearestPort, findEnemy } from './game-actions-available';
+import { addPlunder, sellPlunder } from '../sim/economy/plunder';
+import { increaseInfamy } from '../sim/state/reputation';
 
 export { getAvailableActions } from './game-actions-available';
 
@@ -89,6 +91,11 @@ export function executeCommand(
     return { ok: true, msg: np.port.name + ' is now friendly' };
   }
   if (name === 'attack_port') { return attackPort(gs, np); }
+  if (name === 'sell_plunder') {
+    const msg = sellPlunder(gs, np?.port ?? null);
+    addLog(msg, msg.includes('No plunder') ? 'r' : 'g');
+    return { ok: !msg.includes('No plunder'), msg };
+  }
 
   if (name === 'loot' || name === 'capture' || name === 'board' || name === 'burn') {
     const en = findEnemy(gs, Number(cmd['enemyIndex'] ?? -1));
@@ -106,9 +113,12 @@ function attackPort(
   const p = gs.player;
   const result = portUnderAttack(np.port, p.cn, p.hp, p.maxHp, 'PIRATE');
   if (result.success) {
-    p.gold += np.port.wealth; p.fame += 60; p.kills++;
+    const instantGold = ~~(np.port.wealth * 0.2);
+    p.gold += instantGold; p.fame += 60; p.kills++;
+    addPlunder(gs, 'Port Booty', Math.max(120, ~~(np.port.wealth * 0.8)), np.port.name, 1);
+    increaseInfamy(gs, 12, np.port.nat);
     gs.particles.push(...createExplosion(np.port.x, np.port.y, '#ff4400', 20));
-    addLog(result.msg, 'g');
+    addLog(result.msg + ` +${instantGold}g now, plunder stored for sale.`, 'g');
   } else {
     const dmg = 2 + ~~(Math.random() * 6); p.hp = Math.max(1, p.hp - dmg);
     addLog('REPELLED! -' + dmg + ' HP', 'r');

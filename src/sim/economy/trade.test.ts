@@ -61,6 +61,13 @@ describe('buyGoods', () => {
     buyGoods(p, port, 'RUM', 5);
     expect(p.gold).toBe(740);
   });
+
+  it('increases cargo capacity when the fleet grows', () => {
+    const p = mkPlayer({ fleet: [{ tk: 'SLOOP' }, { tk: 'SLOOP' }] });
+    const port = mkPort();
+    const msg = buyGoods(p, port, 'SUGAR', 25);
+    expect(msg).toContain('Bought 25');
+  });
 });
 
 describe('sellGoods', () => {

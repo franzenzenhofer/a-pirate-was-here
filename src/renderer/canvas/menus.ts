@@ -1,6 +1,7 @@
 import type { PlayerShip, EnemyShip, Port } from '../../core/types';
 import { NATION_FLAGS } from '../../config/ports';
 import { getTradeInfo, buyGoods, sellGoods } from '../../sim/economy/trade';
+import { cargoCapacity } from '../../sim/state/fleet';
 import { getUpgradeOptions } from '../../sim/economy/upgrade';
 import { resolveBoarding } from '../../sim/combat/boarding';
 import type { LogFn } from './log';
@@ -17,6 +18,7 @@ export function openPortMenu(
   p: Port, player: PlayerShip, log: LogFn,
   onClose: () => void, onAttack: (p: Port) => void,
   onTrade: (p: Port) => void, onUpgrade: (p: Port) => void,
+  onSellPlunder: (p: Port) => void,
 ): void {
   const menu = document.getElementById('pmenu')!;
   document.getElementById('ptitle')!.textContent = (NATION_FLAGS[p.nat] ?? '') + ' ' + p.name + ' [' + p.rel.toUpperCase() + ']';
@@ -40,7 +42,7 @@ export function openPortMenu(
     });
     mkBtn(body, '📦 TRADE GOODS', 'b', () => { close(); onTrade(p); });
     mkBtn(body, '🛠️ UPGRADES', 'b', () => { close(); onUpgrade(p); });
-    mkBtn(body, '💰 SELL PLUNDER', 'y', () => { const b = 150 + ~~(Math.random() * 500); player.gold += b; log('Sold: +' + b + 'g', 'g'); close(); });
+    mkBtn(body, '💰 SELL PLUNDER', 'y', () => { onSellPlunder(p); close(); });
     mkBtn(body, '⚔️ ATTACK PORT', 'r', () => { close(); onAttack(p); });
   } else if (p.rel === 'neutral') {
     mkBtn(body, '🤝 PAY TRIBUTE (200g → friendly)', 'y', () => {
@@ -134,7 +136,7 @@ export function openTradeMenu(port: Port, player: PlayerShip, log: LogFn, onClos
     const g = document.createElement('div');
     g.style.cssText = 'color:#f0c040;font-size:6px;margin-top:8px;text-align:center';
     const used = player.cargo.reduce((sum, item) => sum + item.qty, 0);
-    g.textContent = `💰 ${player.gold} GOLD · HOLD ${used}/20`; body.appendChild(g);
+    g.textContent = `💰 ${player.gold} GOLD · HOLD ${used}/${cargoCapacity(player)}`; body.appendChild(g);
   }
   render();
   menu.style.display = 'block';

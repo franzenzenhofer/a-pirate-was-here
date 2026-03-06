@@ -35,6 +35,7 @@ export const ERA_NAMES = [
 ] as const;
 
 export const ERA_DAYS = [0, 15, 35, 60, 90] as const;
+export const ERA_FAME = [0, 60, 150, 300, 520] as const;
 
 /** Timing constants (milliseconds) */
 export const DAY_DURATION = 12000;

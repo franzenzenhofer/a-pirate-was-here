@@ -40,7 +40,7 @@ export function placePorts(tiles: Uint8Array, seed: number): Port[] {
       y: py,
       name: PORT_NAMES[ports.length] ?? 'UNKNOWN',
       nat,
-      rel: nat === 'PIRATE' ? 'neutral' : 'friendly',
+      rel: nat === 'PIRATE' ? 'friendly' : 'neutral',
       garrison: 5 + ~~(rP() * 20),
       wealth: 600 + ~~(rP() * 2000),
       cannons: 4 + ~~(rP() * 12),

@@ -13,6 +13,7 @@ import { followTarget } from '../renderer/camera';
 import type { Camera } from '../renderer/camera';
 import { updateWind } from '../sim/nav/wind';
 import { addLog } from '../renderer/canvas/log';
+import { fleetDamageBonus } from '../sim/state/fleet';
 
 export function updateGame(gs: GameState, cam: Camera, dt: number, renderFn: () => void): void {
   if (gs.paused || gs.gameOver) { renderFn(); return; }
@@ -67,7 +68,8 @@ function autoFirePlayer(gs: GameState): void {
     if (d < nd) { nd = d; near = e; }
   }
   if (near) {
-    gs.cannonballs.push(...fireBroadside(player.x, player.y, player.angle, near.x, near.y, true, 2, player.rng, Math.min(player.cn, 5)));
+    const dmg = 2 + fleetDamageBonus(player);
+    gs.cannonballs.push(...fireBroadside(player.x, player.y, player.angle, near.x, near.y, true, dmg, player.rng, Math.min(player.cn, 5)));
     player.reloadT = SHIP_TYPES[player.tk]?.rl ?? 5500;
   }
 }

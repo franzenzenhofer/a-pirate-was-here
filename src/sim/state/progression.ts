@@ -1,6 +1,6 @@
 import type { Port } from '../../core/types';
 import type { GameState } from './game-state';
-import { ERA_DAYS, ERA_NAMES, SPAWN_INTERVAL, TREASURE_RESPAWN, PORT_WAR_CHECK } from '../../config/world';
+import { ERA_FAME, ERA_NAMES, SPAWN_INTERVAL, TREASURE_RESPAWN, PORT_WAR_CHECK } from '../../config/world';
 import { TIERS } from '../../config/ports';
 import { NATION_FLAGS } from '../../config/ports';
 import { spawnEdgeEnemy, spawnTreasures, createEnemy } from './spawn';
@@ -16,8 +16,12 @@ export function updateProgression(gs: GameState, dt: number): void {
   cleanupSunkShips(gs);
 }
 
+export function eraForFame(fame: number): number {
+  return ERA_FAME.filter(f => fame >= f).length - 1;
+}
+
 function updateEra(gs: GameState): void {
-  const newEra = ERA_DAYS.filter(d => gs.player.day >= d).length - 1;
+  const newEra = eraForFame(gs.player.fame);
   if (newEra > gs.era) {
     gs.era = newEra;
     const el = document.getElementById('era');
@@ -94,7 +98,7 @@ function cleanupSunkShips(gs: GameState): void {
   if (gs.enemies.length > 200) {
     let removed = 0;
     for (let i = gs.enemies.length - 1; i >= 0 && removed < 50; i--) {
-      if (gs.enemies[i]?.sunk) { gs.enemies.splice(i, 1); removed++; }
+      if (gs.enemies[i]?.sunk || gs.enemies[i]?.captured) { gs.enemies.splice(i, 1); removed++; }
     }
   }
 }
@@ -120,4 +124,3 @@ export function portUnderAttack(
   }
   return { success: false, msg: port.name + ' repelled attack!' };
 }
-

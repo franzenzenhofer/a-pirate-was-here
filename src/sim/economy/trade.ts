@@ -1,9 +1,7 @@
 import type { PlayerShip, Port } from '../../core/types';
 import { TRADE_GOODS } from '../../config/economy';
 import { tradePriceFor } from './pricing';
-
-/** Maximum cargo slots */
-const MAX_CARGO = 20;
+import { cargoCapacity } from '../state/fleet';
 
 /** Get current cargo count */
 export function cargoCount(player: PlayerShip): number {
@@ -20,7 +18,7 @@ export function buyGoods(
   const price = tradePriceFor(port, goodName);
   if (price === null) return 'Good not available here';
 
-  const space = MAX_CARGO - cargoCount(player);
+  const space = cargoCapacity(player) - cargoCount(player);
   const affordable = Math.floor(player.gold / price);
   const actual = Math.min(qty, space, affordable);
 

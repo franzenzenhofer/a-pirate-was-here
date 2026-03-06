@@ -27,6 +27,8 @@ import { setAITransitionLogger } from '../sim/ai/strategy';
 import { setLogHook } from '../renderer/canvas/log';
 import { pushArchive } from '../sim/state/archive';
 import { bindSessionUI, syncSessionUI } from './session-ui';
+import { addPlunder, sellPlunder } from '../sim/economy/plunder';
+import { increaseInfamy } from '../sim/state/reputation';
 
 // Canvas
 const canvas = document.getElementById('c') as HTMLCanvasElement;
@@ -111,7 +113,8 @@ setupInputListeners(canvas, input, cam, (result) => {
         () => { gs.paused = false; },
         (port) => { attackPort(port); gs.paused = false; },
         (port) => { gs.paused = true; openTradeMenu(port, player, addLog, () => { gs.paused = false; }); },
-        () => { gs.paused = true; openUpgradeMenu(player, addLog, () => { gs.paused = false; }); });
+        () => { gs.paused = true; openUpgradeMenu(player, addLog, () => { gs.paused = false; }); },
+        (port) => { addLog(sellPlunder(gs, port), 'g'); gs.paused = false; });
       return;
     }
   }
@@ -136,12 +139,16 @@ setupKeyboardListeners(keys);
 
 function attackPort(p: typeof ports[number]): void {
   addLog('⚔️ ATTACKING ' + p.name + '!', 'r');
+  const defendingNation = p.nat;
   const result = portUnderAttack(p, player.cn, player.hp, player.maxHp, 'PIRATE');
   setTimeout(() => {
     if (result.success) {
-      player.gold += p.wealth; player.fame += 60; player.kills++;
+      const instantGold = ~~(p.wealth * 0.2);
+      player.gold += instantGold; player.fame += 60; player.kills++;
+      addPlunder(gs, 'Port Booty', Math.max(120, ~~(p.wealth * 0.8)), p.name, 1);
+      increaseInfamy(gs, 12, defendingNation);
       gs.particles.push(...createExplosion(p.x, p.y, '#ff4400', 20));
-      addLog('🏆 ' + result.msg, 'g');
+      addLog('🏆 ' + result.msg + ` +${instantGold}g now, cargo hold packed with booty.`, 'g');
     } else {
       const dmg = 2 + ~~(Math.random() * 6);
       player.hp = Math.max(1, player.hp - dmg);
