@@ -12,6 +12,7 @@ function mkPlayer(overrides: Partial<PlayerShip> = {}): PlayerShip {
     reloadT: 0, disabled: false, sunk: false, captured: false,
     wakePoints: [], turnRate: 1.0, nat: 'PIRATE',
     gold: 500, crew: 80, fame: 0, kills: 0, day: 1, dayT: 0, fleet: [], cargo: [],
+    upgrades: { hull: 0, sails: 0, range: 0 },
     ...overrides,
   };
 }

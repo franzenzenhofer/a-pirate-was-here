@@ -12,6 +12,7 @@ function mkPlayer(overrides: Partial<PlayerShip> = {}): PlayerShip {
     reloadT: 0, disabled: false, sunk: false, captured: false,
     wakePoints: [], turnRate: 1.0, nat: 'PIRATE',
     gold: 5000, crew: 80, fame: 0, kills: 0, day: 1, dayT: 0, fleet: [], cargo: [],
+    upgrades: { hull: 0, sails: 0, range: 0 },
     ...overrides,
   };
 }
@@ -35,12 +36,27 @@ describe('getUpgradeOptions', () => {
     expect(p.maxHp).toBe(oldMax + 4);
   });
 
+  it('offers sail upgrades to the starting brigantine', () => {
+    const p = mkPlayer({ bspd: 2.6 });
+    const sailOpt = getUpgradeOptions(p).find(o => o.name.includes('SAILS'));
+    expect(sailOpt?.canAfford).toBe(true);
+  });
+
   it('ship upgrade changes ship type', () => {
     const p = mkPlayer({ gold: 10000 });
     const shipOpt = getUpgradeOptions(p).find(o => o.name.includes('FRIGATE'));
     expect(shipOpt).toBeDefined();
     shipOpt!.action();
     expect(p.tk).toBe('FRIGATE');
+  });
+
+  it('preserves persistent hull and range upgrades across class changes', () => {
+    const p = mkPlayer({ gold: 12000 });
+    getUpgradeOptions(p).find(o => o.name.includes('HULL'))!.action();
+    getUpgradeOptions(p).find(o => o.name.includes('RANGE'))!.action();
+    getUpgradeOptions(p).find(o => o.name.includes('FRIGATE'))!.action();
+    expect(p.maxHp).toBeGreaterThan(22);
+    expect(p.rng).toBeGreaterThan(6.5);
   });
 
   it('cannot afford with low gold', () => {

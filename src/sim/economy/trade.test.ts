@@ -15,6 +15,7 @@ function mkPlayer(overrides: Partial<PlayerShip> = {}): PlayerShip {
     gold: 1000, crew: 80, fame: 0, kills: 0,
     day: 1, dayT: 0, fleet: [],
     cargo: [],
+    upgrades: { hull: 0, sails: 0, range: 0 },
     ...overrides,
   };
 }
@@ -46,6 +47,20 @@ describe('buyGoods', () => {
     const msg = buyGoods(p, port, 'SPICES', 5);
     expect(msg).toContain('Not enough gold');
   });
+
+  it('uses weighted average buy price when stacking cargo', () => {
+    const p = mkPlayer({ cargo: [{ good: 'RUM', qty: 10, buyPrice: 10 }] });
+    const port = mkPort();
+    buyGoods(p, port, 'RUM', 5);
+    expect(p.cargo[0]?.buyPrice).toBe(20);
+  });
+
+  it('applies neutral relation pricing to purchases', () => {
+    const p = mkPlayer();
+    const port = { ...mkPort(), rel: 'neutral' };
+    buyGoods(p, port, 'RUM', 5);
+    expect(p.gold).toBe(740);
+  });
 });
 
 describe('sellGoods', () => {
@@ -56,6 +71,13 @@ describe('sellGoods', () => {
     expect(msg).toContain('Sold');
     expect(p.gold).toBe(1200); // 1000 + 5*40
     expect(p.cargo.length).toBe(0);
+  });
+
+  it('applies neutral relation pricing to sales', () => {
+    const p = mkPlayer({ cargo: [{ good: 'RUM', qty: 5, buyPrice: 30 }] });
+    const port = { ...mkPort(), rel: 'neutral' };
+    sellGoods(p, port, 'RUM');
+    expect(p.gold).toBe(1260);
   });
 });
 

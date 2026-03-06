@@ -98,8 +98,7 @@ export function spawnTreasures(tiles: Uint8Array, count: number, existing: Treas
   for (let a = 0; a < 5000 && newTreas.length < count; a++) {
     const tx = ~~(rT() * WORLD_W);
     const ty = ~~(rT() * WORLD_H);
-    const tile = tiles[ty * WORLD_W + tx];
-    if (tile !== 3 && tile !== 4) continue; // SAND or GRASS
+    if (!isTreasureShoreSpot(tiles, tx, ty)) continue;
 
     const tooClose = [...existing, ...newTreas].some(
       t => !t.looted && Math.abs(t.x - tx) < 5 && Math.abs(t.y - ty) < 5
@@ -110,4 +109,16 @@ export function spawnTreasures(tiles: Uint8Array, count: number, existing: Treas
   }
 
   return newTreas;
+}
+
+export function isTreasureShoreSpot(tiles: Uint8Array, tx: number, ty: number): boolean {
+  const tile = tiles[ty * WORLD_W + tx];
+  if (tile !== 3 && tile !== 4) return false;
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      if (isSail(tiles, tx + dx, ty + dy)) return true;
+    }
+  }
+  return false;
 }

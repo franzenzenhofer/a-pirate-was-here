@@ -36,7 +36,24 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;posit
 #era .etxt{font-size:11px;color:#ffcc44;text-shadow:0 0 12px #ff8800,0 0 24px #ff4400;padding:10px 18px;background:rgba(0,0,0,0.85);border:2px solid #ff8800}
 #navpulse{position:fixed;z-index:25;pointer-events:none;display:none;width:24px;height:24px;border:2px solid rgba(255,220,60,0.6);border-radius:50%;animation:pulse 0.6s ease-out}
 @keyframes pulse{0%{transform:translate(-50%,-50%) scale(0.5);opacity:1}100%{transform:translate(-50%,-50%) scale(2.5);opacity:0}}
-#compass{position:fixed;top:58px;right:10px;z-index:31;pointer-events:none;width:40px;height:40px}
+    #compass{position:fixed;top:58px;right:10px;z-index:31;pointer-events:none;width:40px;height:40px}
+    #metaBtns{position:fixed;top:58px;left:10px;z-index:35;display:flex;gap:6px}
+    .tb{font-family:inherit;font-size:6px;padding:6px 8px;background:#060d1a;border:1px solid #4458aa;color:#88ccff;cursor:pointer}
+    #archivePanel,#gameover{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;background:rgba(4,10,20,0.96);border:2px solid #5566aa;box-shadow:0 0 24px #000b;display:none}
+    #archivePanel{width:min(92vw,420px);max-height:70vh;padding:14px;overflow:auto}
+    #archivePanel h3,#gameover h3{font-size:8px;color:#f0c040;margin-bottom:10px}
+    #archiveBody{display:flex;flex-direction:column;gap:4px}
+    .arch{font-size:6px;line-height:1.7;padding:4px 6px;background:#091224;border-left:2px solid #f0c040;color:#f0c040}
+    .arch.r{border-color:#ff4444;color:#ff8888}.arch.g{border-color:#44ff88;color:#88ffaa}.arch.b{border-color:#44aaff;color:#88ccff}.arch.o{border-color:#ffaa44;color:#ffcc88}
+    #gameover{width:min(92vw,360px);padding:16px;text-align:center}
+    #goSummary{font-size:6px;line-height:1.8;color:#aac4ff;margin:10px 0 14px}
+    @media (max-width: 640px){
+      #topbar{padding:4px 5px}
+      .sc{font-size:5px;min-width:70px;line-height:1.8}
+      #minimap{width:78px;height:62px;opacity:0.92}
+      #metaBtns{top:auto;bottom:8px;left:auto;right:92px}
+      .tb{font-size:5px;padding:5px 6px}
+    }
 </style>
 </head>
 <body>
@@ -63,13 +80,16 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;posit
     </div>
   </div>
 </div>
+<div id="metaBtns"><button class="tb" id="archiveBtn">LOG</button></div>
 <canvas id="minimap" width="110" height="88"></canvas>
 <canvas id="compass" width="40" height="40"></canvas>
 <div id="log"></div>
 <div id="pmenu"><h3 id="ptitle">PORT</h3><div id="pbody"></div><div class="mc" id="pclose">[ CLOSE ]</div></div>
 <div id="cmenu"><h3 id="ctitle">CAPTURED!</h3><div id="cbody"></div><div class="mc" id="cclose">[ CLOSE ]</div></div>
 <div id="tmenu"><h3 id="ttitle">TRADE</h3><div id="tbody"></div><div class="mc" id="tclose">[ CLOSE ]</div></div>
+<div id="archivePanel"><h3>CAPTAIN'S LOG</h3><div id="archiveBody"></div><div class="mc" id="archiveClose">[ CLOSE ]</div></div>
 <div id="era"><div class="etxt" id="eraTxt"></div></div>
+<div id="gameover"><h3>YOUR SHIP WAS LOST</h3><div id="goSummary"></div><button class="tb" id="goRestart">SET SAIL AGAIN</button></div>
 <div id="navpulse"></div>
 <script type="module" src="/src/client/main.ts"></script>
 </body>

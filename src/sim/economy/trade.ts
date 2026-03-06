@@ -1,5 +1,6 @@
 import type { PlayerShip, Port } from '../../core/types';
 import { TRADE_GOODS } from '../../config/economy';
+import { tradePriceFor } from './pricing';
 
 /** Maximum cargo slots */
 const MAX_CARGO = 20;
@@ -16,8 +17,8 @@ export function buyGoods(
   goodName: string,
   qty: number,
 ): string {
-  const price = port.prices[goodName];
-  if (price === undefined) return 'Good not available here';
+  const price = tradePriceFor(port, goodName);
+  if (price === null) return 'Good not available here';
 
   const space = MAX_CARGO - cargoCount(player);
   const affordable = Math.floor(player.gold / price);
@@ -34,8 +35,10 @@ export function buyGoods(
   // Add to existing cargo or create new entry
   const existing = player.cargo.find(c => c.good === goodName);
   if (existing) {
+    const totalQty = existing.qty + actual;
+    const totalSpent = existing.buyPrice * existing.qty + cost;
     existing.qty += actual;
-    existing.buyPrice = ~~((existing.buyPrice + price) / 2);
+    existing.buyPrice = ~~(totalSpent / totalQty);
   } else {
     player.cargo.push({ good: goodName, qty: actual, buyPrice: price });
   }
@@ -49,8 +52,8 @@ export function sellGoods(
   port: Port,
   goodName: string,
 ): string {
-  const price = port.prices[goodName];
-  if (price === undefined) return 'Not traded here';
+  const price = tradePriceFor(port, goodName);
+  if (price === null) return 'Not traded here';
 
   const item = player.cargo.find(c => c.good === goodName);
   if (!item || item.qty <= 0) return 'None in cargo!';
@@ -70,15 +73,17 @@ export function sellGoods(
 export function getTradeInfo(player: PlayerShip, port: Port): TradeDisplay[] {
   return TRADE_GOODS.map(good => {
     const portPrice = port.prices[good.name] ?? good.basePrice;
+    const tradePrice = tradePriceFor(port, good.name) ?? portPrice;
     const held = player.cargo.find(c => c.good === good.name);
     const qty = held?.qty ?? 0;
     const buyPrice = held?.buyPrice ?? 0;
-    const profitPerUnit = qty > 0 ? portPrice - buyPrice : 0;
+    const profitPerUnit = qty > 0 ? tradePrice - buyPrice : 0;
 
     return {
       name: good.name,
       color: good.color,
       portPrice,
+      tradePrice,
       qty,
       profitPerUnit,
     };
@@ -89,6 +94,7 @@ export interface TradeDisplay {
   name: string;
   color: string;
   portPrice: number;
+  tradePrice: number;
   qty: number;
   profitPerUnit: number;
 }

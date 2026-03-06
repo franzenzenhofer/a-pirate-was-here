@@ -1,4 +1,6 @@
 /** Branded type helper — prevents mixing IDs of different entity types */
+import type { ShipUpgradeLevels } from './campaign-types';
+
 type Brand<T, B extends string> = T & { readonly __brand: B };
 
 export type Seed = Brand<number, 'Seed'>;
@@ -53,6 +55,7 @@ export interface PlayerShip extends Ship {
   dayT: number;
   fleet: FleetShip[];
   cargo: CargoItem[];
+  upgrades: ShipUpgradeLevels;
 }
 
 export interface FleetShip {

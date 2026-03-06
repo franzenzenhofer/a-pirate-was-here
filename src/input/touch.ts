@@ -15,6 +15,12 @@ export function createInputState(): InputState {
   return { panStart: null, panCamStart: null, touchStart: 0, startX: 0, startY: 0, panned: false };
 }
 
+export function resetInputState(input: InputState): void {
+  input.panStart = null;
+  input.panCamStart = null;
+  input.panned = false;
+}
+
 export function handlePointerDown(
   input: InputState,
   cx: number, cy: number,
@@ -58,10 +64,10 @@ export function handlePointerUp(
   cam: Camera,
 ): TapResult | null {
   if (!input.panStart) return null;
-  input.panStart = null;
+  resetInputState(input);
 
-  // Was it a tap? (not a pan, within 400ms — increased from 350ms for mobile)
-  if (!input.panned && Date.now() - input.touchStart < 400) {
+  // Was it a tap? (not a pan, within 550ms for better mobile forgiveness)
+  if (!input.panned && Date.now() - input.touchStart < 550) {
     const wx = cam.x + cx / TILE_PX;
     const wy = cam.y + cy / TILE_PX;
     return { type: 'navigate', wx, wy };
@@ -77,6 +83,7 @@ export function setupInputListeners(
   cam: Camera,
   onTap: (result: TapResult) => void,
 ): void {
+  const clear = (): void => resetInputState(input);
   canvas.addEventListener('touchstart', e => {
     e.preventDefault();
     const t = e.touches[0];
@@ -97,6 +104,7 @@ export function setupInputListeners(
       if (result) onTap(result);
     }
   }, { passive: false });
+  canvas.addEventListener('touchcancel', clear, { passive: true });
 
   canvas.addEventListener('mousedown', e => {
     handlePointerDown(input, e.clientX, e.clientY, cam);
@@ -110,4 +118,7 @@ export function setupInputListeners(
     const result = handlePointerUp(input, e.clientX, e.clientY, cam);
     if (result) onTap(result);
   });
+  canvas.addEventListener('mouseleave', clear);
+  window.addEventListener('mouseup', clear);
+  window.addEventListener('blur', clear);
 }

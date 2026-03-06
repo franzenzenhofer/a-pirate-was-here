@@ -15,7 +15,7 @@ import { updateWind } from '../sim/nav/wind';
 import { addLog } from '../renderer/canvas/log';
 
 export function updateGame(gs: GameState, cam: Camera, dt: number, renderFn: () => void): void {
-  if (gs.paused) { renderFn(); return; }
+  if (gs.paused || gs.gameOver) { renderFn(); return; }
   updateWind(gs.wind, dt);
   updatePlayer(gs, cam, dt);
   updateEnemies(gs, dt);
@@ -27,6 +27,7 @@ export function updateGame(gs: GameState, cam: Camera, dt: number, renderFn: () 
 
 function updatePlayer(gs: GameState, cam: Camera, dt: number): void {
   const player = gs.player;
+  if (player.hp <= 0) return;
   player.reloadT = Math.max(0, player.reloadT - dt);
   player.dayT += dt;
   if (player.dayT > DAY_DURATION) {
@@ -36,7 +37,6 @@ function updatePlayer(gs: GameState, cam: Camera, dt: number): void {
     if (player.gold >= wages) player.gold -= wages;
     else { player.crew = Math.max(1, player.crew - 2); addLog('Crew deserts — no pay!', 'r'); }
   }
-  if (player.hp <= 0) return;
 
   if (player.targetX !== null && player.targetY !== null) {
     const st = SHIP_TYPES[player.tk];
@@ -132,4 +132,3 @@ function fireEnemyWeapons(gs: GameState, en: EnemyShip): void {
     }
   }
 }
-

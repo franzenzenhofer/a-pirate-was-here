@@ -62,7 +62,10 @@ export function openPortMenu(
 }
 
 export function openCaptureMenu(
-  en: EnemyShip, player: PlayerShip, log: LogFn, onSunk: (en: EnemyShip) => void,
+  en: EnemyShip,
+  player: PlayerShip,
+  log: LogFn,
+  onDone: (en: EnemyShip, outcome: 'sunk' | 'captured' | 'released') => void,
 ): void {
   if (en.sunk) return;
   const menu = document.getElementById('cmenu')!;
@@ -73,26 +76,27 @@ export function openCaptureMenu(
 
   mkBtn(body, `💰 LOOT & SINK (+${en.loot}g +${en.xp}fame)`, 'y', () => {
     player.gold += en.loot; player.kills++; player.fame += en.xp;
-    en.sunk = true; onSunk(en); log('💰 Looted ' + en.tk + ': +' + en.loot + 'g', 'g'); close();
+    en.sunk = true; onDone(en, 'sunk'); log('💰 Looted ' + en.tk + ': +' + en.loot + 'g', 'g'); close();
   });
   mkBtn(body, `⚓ CLAIM PRIZE SHIP (+${~~(en.loot * 0.3)}g)`, 'g', () => {
     player.fleet.push({ tk: en.tk }); player.fame += en.xp * 4; player.gold += ~~(en.loot * 0.3);
-    en.sunk = true; log('⚓ ' + en.tk + ' joins fleet!', 'g'); close();
+    en.captured = true; en.disabled = false; log('⚓ ' + en.tk + ' joins fleet!', 'g');
+    onDone(en, 'captured'); close();
   });
   mkBtn(body, `⚔️ BOARD! (crew: ${player.crew})`, 'b', () => {
     const result = resolveBoarding(player, en);
     player.crew = Math.max(1, player.crew - result.playerCrewLost);
     if (result.success) {
       player.gold += result.loot; player.fame += result.fame; player.kills++;
-      en.sunk = true; onSunk(en); log('⚔️ ' + result.msg, 'g');
-    } else { log('⚔️ ' + result.msg, 'r'); }
+      en.sunk = true; onDone(en, 'sunk'); log('⚔️ ' + result.msg, 'g');
+    } else { onDone(en, 'released'); log('⚔️ ' + result.msg, 'r'); }
     close();
   });
   mkBtn(body, `🔥 BURN IT (+${en.xp}fame)`, 'r', () => {
-    player.fame += en.xp; en.sunk = true; onSunk(en); close();
+    player.fame += en.xp; en.sunk = true; onDone(en, 'sunk'); close();
   });
   menu.style.display = 'block';
-  document.getElementById('cclose')!.onclick = close;
+  document.getElementById('cclose')!.onclick = () => { onDone(en, 'released'); close(); };
 }
 
 export function openTradeMenu(port: Port, player: PlayerShip, log: LogFn, onClose: () => void): void {
@@ -102,20 +106,23 @@ export function openTradeMenu(port: Port, player: PlayerShip, log: LogFn, onClos
   function render(): void {
     body.innerHTML = '';
     const info = getTradeInfo(player, port);
-    const mult = port.rel === 'neutral' ? 1.3 : 1.0;
     for (const item of info) {
-      const price = ~~(item.portPrice * mult);
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;padding:2px 0;border-bottom:1px solid #223';
       const label = document.createElement('span');
       label.style.cssText = `color:${item.color};font-size:6px;font-family:inherit`;
-      label.textContent = `${item.name} ${price}g ${item.qty > 0 ? '(×' + item.qty + ')' : ''}`;
+      const profit = item.qty > 0 ? ` ${item.profitPerUnit >= 0 ? '+' : ''}${item.profitPerUnit}g` : '';
+      label.textContent = `${item.name} ${item.tradePrice}g${profit}${item.qty > 0 ? ' (×' + item.qty + ')' : ''}`;
       row.appendChild(label);
       const btns = document.createElement('span');
       if (item.qty > 0) {
         const sb = document.createElement('button'); sb.className = 'mb g';
         sb.style.cssText = 'width:auto;display:inline;padding:3px 6px;margin:0 2px;font-size:5px';
-        sb.textContent = 'SELL'; sb.onclick = () => { log(sellGoods(player, port, item.name), 'g'); render(); };
+        sb.textContent = 'SELL'; sb.onclick = () => {
+          const msg = sellGoods(player, port, item.name);
+          log(msg, msg.includes('loss') ? 'o' : msg.includes('Sold') ? 'g' : 'r');
+          render();
+        };
         btns.appendChild(sb);
       }
       const bb = document.createElement('button'); bb.className = 'mb y';
@@ -126,7 +133,8 @@ export function openTradeMenu(port: Port, player: PlayerShip, log: LogFn, onClos
     }
     const g = document.createElement('div');
     g.style.cssText = 'color:#f0c040;font-size:6px;margin-top:8px;text-align:center';
-    g.textContent = `💰 ${player.gold} GOLD`; body.appendChild(g);
+    const used = player.cargo.reduce((sum, item) => sum + item.qty, 0);
+    g.textContent = `💰 ${player.gold} GOLD · HOLD ${used}/20`; body.appendChild(g);
   }
   render();
   menu.style.display = 'block';

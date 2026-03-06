@@ -2,8 +2,16 @@ import type { GameState } from '../sim/state/game-state';
 import { getTradeInfo } from '../sim/economy/trade';
 import { getUpgradeOptions } from '../sim/economy/upgrade';
 
-const PORT_RANGE = 4;
-const ENEMY_RANGE = 3;
+export const PORT_RANGE = 4;
+export const ENEMY_RANGE = 3;
+
+export function portInRange(gs: GameState, port: typeof gs.ports[0]): boolean {
+  return Math.hypot(port.x - gs.player.x, port.y - gs.player.y) < PORT_RANGE;
+}
+
+export function captureInRange(gs: GameState, en: typeof gs.enemies[0]): boolean {
+  return Math.hypot(en.x - gs.player.x, en.y - gs.player.y) < ENEMY_RANGE;
+}
 
 export function nearestPort(gs: GameState): { port: typeof gs.ports[0]; dist: number } | null {
   let best: typeof gs.ports[0] | null = null;
@@ -18,7 +26,7 @@ export function nearestPort(gs: GameState): { port: typeof gs.ports[0]; dist: nu
 export function findEnemy(gs: GameState, idx: number): typeof gs.enemies[0] | null {
   const en = gs.enemies[idx];
   if (!en || en.sunk || !en.disabled) return null;
-  if (Math.hypot(en.x - gs.player.x, en.y - gs.player.y) > ENEMY_RANGE * 3) return null;
+  if (!captureInRange(gs, en)) return null;
   return en;
 }
 
