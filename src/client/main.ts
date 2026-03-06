@@ -39,10 +39,11 @@ const { player, ports, enemies, wind } = gs;
 const morale = createMorale();
 
 // Minimap + compass
-const mmCtx = (document.getElementById('minimap') as HTMLCanvasElement).getContext('2d')!;
-buildMinimapBase(mmCtx, gs.world.tiles);
+const minimapCanvas = document.getElementById('minimap') as HTMLCanvasElement | null;
+const mmCtx = minimapCanvas?.getContext('2d') ?? null;
 const compCtx = (document.getElementById('compass') as HTMLCanvasElement).getContext('2d')!;
-if (loadFromStorage(gs)) buildMinimapBase(mmCtx, gs.world.tiles);
+if (mmCtx && gs.settings.minimapMode !== 'hidden') buildMinimapBase(mmCtx, gs.world.tiles);
+if (loadFromStorage(gs) && mmCtx && gs.settings.minimapMode !== 'hidden') buildMinimapBase(mmCtx, gs.world.tiles);
 
 // Resize
 window.addEventListener('resize', () => {
@@ -129,7 +130,7 @@ startLoop((dt) => {
     renderGame(ctx, gs, cam, WP, HP);
     if (frameN % 4 === 0) {
       updateHUD(player, gs.era, wind);
-      drawMinimap(mmCtx, ports, enemies, player, cam);
+      if (mmCtx && gs.settings.minimapMode !== 'hidden') drawMinimap(mmCtx, ports, enemies, player, cam);
       drawCompass(compCtx, wind);
       syncSessionUI(gs);
     }

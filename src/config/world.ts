@@ -2,7 +2,7 @@
 export const WORLD_W = 256;
 export const WORLD_H = 200;
 export const DEFAULT_SEED = 42;
-export const TILE_PX = 16;
+export const TILE_PX = 24;
 
 /** Speed scale — multiply by dt(ms) to get tiles moved */
 export const SPD_SCALE = 1 / 1000;

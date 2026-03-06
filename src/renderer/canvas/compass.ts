@@ -5,11 +5,12 @@ export function drawCompass(
   ctx: CanvasRenderingContext2D,
   wind: WindState,
 ): void {
-  const cx = 20;
-  const cy = 20;
-  const r = 16;
+  const size = Math.min(ctx.canvas.width, ctx.canvas.height);
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = size / 2 - 8;
 
-  ctx.clearRect(0, 0, 40, 40);
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
   // Background
   ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -26,24 +27,24 @@ export function drawCompass(
 
   // Cardinal points
   ctx.fillStyle = '#668899';
-  ctx.font = '5px "Press Start 2P"';
+  ctx.font = '16px "Press Start 2P"';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('N', cx, cy - r + 4);
-  ctx.fillText('S', cx, cy + r - 4);
-  ctx.fillText('E', cx + r - 4, cy);
-  ctx.fillText('W', cx - r + 4, cy);
+  ctx.fillText('N', cx, cy - r + 8);
+  ctx.fillText('S', cx, cy + r - 8);
+  ctx.fillText('E', cx + r - 8, cy);
+  ctx.fillText('W', cx - r + 8, cy);
 
   // Wind arrow
   const wa = wind.angle - Math.PI / 2; // rotate so 0 = north
-  const arrowLen = r * 0.65 * (0.5 + wind.strength * 0.5);
+  const arrowLen = r * 0.62 * (0.5 + wind.strength * 0.5);
 
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(wa);
 
   ctx.strokeStyle = '#44aaff';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 3;
   ctx.beginPath();
   ctx.moveTo(0, 0);
   ctx.lineTo(0, -arrowLen);
@@ -52,9 +53,9 @@ export function drawCompass(
   // Arrowhead
   ctx.fillStyle = '#44aaff';
   ctx.beginPath();
-  ctx.moveTo(0, -arrowLen - 3);
-  ctx.lineTo(-3, -arrowLen + 2);
-  ctx.lineTo(3, -arrowLen + 2);
+  ctx.moveTo(0, -arrowLen - 5);
+  ctx.lineTo(-5, -arrowLen + 3);
+  ctx.lineTo(5, -arrowLen + 3);
   ctx.fill();
 
   ctx.restore();

@@ -4,6 +4,9 @@ import { cargoCapacity } from '../../sim/state/fleet';
 import { getUpgradeOptions } from '../../sim/economy/upgrade';
 import type { LogFn } from './log';
 
+const MENU_FONT = 16;
+const MENU_BUTTON_FONT = 16;
+
 function tradeLogType(msg: string): string {
   if (msg.includes('loss')) return 'o';
   if (msg.includes('Sold') || msg.includes('Bought')) return 'g';
@@ -27,9 +30,9 @@ export function openTradeMenu(port: Port, player: PlayerShip, log: LogFn, onClos
     const info = getTradeInfo(player, port);
     for (const item of info) {
       const row = document.createElement('div');
-      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;padding:2px 0;border-bottom:1px solid #223';
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;padding:6px 0;border-bottom:1px solid #223';
       const label = document.createElement('span');
-      label.style.cssText = `color:${item.color};font-size:6px;font-family:inherit`;
+      label.style.cssText = `color:${item.color};font-size:${MENU_FONT}px;font-family:inherit;line-height:1.5`;
       const profit = item.qty > 0 ? ` ${item.profitPerUnit >= 0 ? '+' : ''}${item.profitPerUnit}g` : '';
       label.textContent = `${item.name} ${item.tradePrice}g${profit}${item.qty > 0 ? ' (×' + item.qty + ')' : ''}`;
       row.appendChild(label);
@@ -37,21 +40,21 @@ export function openTradeMenu(port: Port, player: PlayerShip, log: LogFn, onClos
       if (item.qty > 0) {
         const sell = document.createElement('button');
         sell.className = 'mb g';
-        sell.style.cssText = 'width:auto;display:inline;padding:3px 6px;margin:0 2px;font-size:5px';
+        sell.style.cssText = `width:auto;display:inline;padding:8px 12px;margin:0 2px;font-size:${MENU_BUTTON_FONT}px`;
         sell.textContent = 'SELL';
         sell.onclick = () => { const msg = sellGoods(player, port, item.name); log(msg, tradeLogType(msg)); render(); };
         btns.appendChild(sell);
       }
       const buy = document.createElement('button');
       buy.className = 'mb y';
-      buy.style.cssText = 'width:auto;display:inline;padding:3px 6px;margin:0 2px;font-size:5px';
+      buy.style.cssText = `width:auto;display:inline;padding:8px 12px;margin:0 2px;font-size:${MENU_BUTTON_FONT}px`;
       buy.textContent = 'BUY';
       buy.onclick = () => { const msg = buyGoods(player, port, item.name, 5); log(msg, tradeLogType(msg)); render(); };
       btns.appendChild(buy);
       row.appendChild(btns); body.appendChild(row);
     }
     const footer = document.createElement('div');
-    footer.style.cssText = 'color:#f0c040;font-size:6px;margin-top:8px;text-align:center';
+    footer.style.cssText = `color:#f0c040;font-size:${MENU_FONT}px;margin-top:14px;text-align:center`;
     const used = player.cargo.reduce((sum, item) => sum + item.qty, 0);
     footer.textContent = `💰 ${player.gold} GOLD · HOLD ${used}/${cargoCapacity(player)}`;
     body.appendChild(footer);
@@ -74,7 +77,7 @@ export function openUpgradeMenu(player: PlayerShip, log: LogFn, onClose: () => v
     });
   }
   const footer = document.createElement('div');
-  footer.style.cssText = 'color:#f0c040;font-size:6px;margin-top:8px;text-align:center';
+  footer.style.cssText = `color:#f0c040;font-size:${MENU_FONT}px;margin-top:14px;text-align:center`;
   footer.textContent = `💰 ${player.gold} GOLD`; body.appendChild(footer);
   menu.style.display = 'block';
   document.getElementById('tclose')!.onclick = () => { menu.style.display = 'none'; onClose(); };

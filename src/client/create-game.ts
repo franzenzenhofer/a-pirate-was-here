@@ -28,7 +28,7 @@ export function createInitialGame(seed: number, screenW: number, screenH: number
       era: 0, spawnTimer: 0, treasureTimer: 0, portWarTimer: 0,
       activePort: null, capturedEnemy: null, tradePort: null, paused: false,
       gameOver: false, archive: [], nextArchiveId: 1, plunder: [], reputation: 0,
-      settings: { audio: true, reducedMotion: false, textScale: 1, minimapMode: 'full' },
+      settings: { audio: true, reducedMotion: false, textScale: 1, minimapMode: 'hidden' },
       activeQuest: null, activeEvent: null,
     },
   };

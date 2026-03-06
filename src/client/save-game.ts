@@ -43,7 +43,13 @@ export function applySnapshot(gs: GameState, saved: SavedGame): void {
   gs.nextArchiveId = Number(saved.nextArchiveId ?? 1);
   gs.plunder = (saved.plunder as GameState['plunder']) ?? [];
   gs.reputation = Number(saved.reputation ?? 0);
-  gs.settings = (saved.settings as GameState['settings']) ?? gs.settings;
+  const savedSettings = (saved.settings as GameState['settings']) ?? gs.settings;
+  gs.settings = {
+    ...gs.settings,
+    ...savedSettings,
+    textScale: Math.max(1, Number(savedSettings.textScale ?? gs.settings.textScale)),
+    minimapMode: 'hidden',
+  };
   gs.activeQuest = (saved.activeQuest as GameState['activeQuest']) ?? null;
   gs.activeEvent = (saved.activeEvent as GameState['activeEvent']) ?? null;
 }

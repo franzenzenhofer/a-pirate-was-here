@@ -1,3 +1,4 @@
+import { getCombatHudState } from './combat-hud';
 import { latestArchive } from '../sim/state/archive';
 import type { GameState } from '../sim/state/game-state';
 
@@ -27,9 +28,19 @@ export function bindSessionUI(onRestart: () => void, onSave: () => void): void {
 }
 
 export function syncSessionUI(gs: GameState): void {
+  applySettingsUI(gs);
   updateGameOver(gs);
   renderArchive(gs);
   renderObjectives(gs);
+  renderCombatHud(gs);
+}
+
+function applySettingsUI(gs: GameState): void {
+  const root = document.documentElement;
+  root.style.setProperty('--ui-scale', String(Math.max(1, gs.settings.textScale)));
+
+  const minimap = document.getElementById('minimap');
+  if (minimap) minimap.style.display = gs.settings.minimapMode === 'hidden' ? 'none' : 'block';
 }
 
 function updateGameOver(gs: GameState): void {
@@ -60,4 +71,29 @@ function renderObjectives(gs: GameState): void {
   if (event) {
     event.textContent = gs.activeEvent?.active ? gs.activeEvent.title : 'NO LEGEND ACTIVE';
   }
+}
+
+function renderCombatHud(gs: GameState): void {
+  const panel = document.getElementById('combatHud');
+  const title = document.getElementById('combatTitle');
+  const meta = document.getElementById('combatMeta');
+  const playerBar = document.getElementById('playerReloadBar');
+  const playerText = document.getElementById('playerReloadText');
+  const enemyBar = document.getElementById('enemyReloadBar');
+  const enemyText = document.getElementById('enemyReloadText');
+  if (!panel || !title || !meta || !playerBar || !playerText || !enemyBar || !enemyText) return;
+
+  const combat = getCombatHudState(gs);
+  if (!combat) {
+    panel.style.display = 'none';
+    return;
+  }
+
+  panel.style.display = 'block';
+  title.textContent = `ENGAGING ${combat.targetName}`;
+  meta.textContent = `DIST ${combat.distance.toFixed(1)} · AUTO-FIRE INSIDE RANGE`;
+  playerBar.style.width = `${combat.player.progress * 100}%`;
+  playerText.textContent = combat.player.label;
+  enemyBar.style.width = `${combat.enemy.progress * 100}%`;
+  enemyText.textContent = combat.enemy.label;
 }
