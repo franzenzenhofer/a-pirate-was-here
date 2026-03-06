@@ -38,6 +38,9 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;posit
 @keyframes pulse{0%{transform:translate(-50%,-50%) scale(0.5);opacity:1}100%{transform:translate(-50%,-50%) scale(2.5);opacity:0}}
     #compass{position:fixed;top:58px;right:10px;z-index:31;pointer-events:none;width:40px;height:40px}
     #metaBtns{position:fixed;top:58px;left:10px;z-index:35;display:flex;gap:6px}
+    #questBox{position:fixed;left:10px;top:92px;z-index:34;background:rgba(4,10,20,0.88);border:1px solid #334477;padding:6px 8px;min-width:160px}
+    #questLine,#eventLine{font-size:6px;line-height:1.8}
+    #questLine{color:#88ffaa}#eventLine{color:#ffcc88}
     .tb{font-family:inherit;font-size:6px;padding:6px 8px;background:#060d1a;border:1px solid #4458aa;color:#88ccff;cursor:pointer}
     #archivePanel,#gameover{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;background:rgba(4,10,20,0.96);border:2px solid #5566aa;box-shadow:0 0 24px #000b;display:none}
     #archivePanel{width:min(92vw,420px);max-height:70vh;padding:14px;overflow:auto}
@@ -80,7 +83,8 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;posit
     </div>
   </div>
 </div>
-<div id="metaBtns"><button class="tb" id="archiveBtn">LOG</button></div>
+<div id="metaBtns"><button class="tb" id="archiveBtn">LOG</button><button class="tb" id="saveBtn">SAVE</button></div>
+<div id="questBox"><div id="questLine">QUEST: NONE</div><div id="eventLine">NO LEGEND ACTIVE</div></div>
 <canvas id="minimap" width="110" height="88"></canvas>
 <canvas id="compass" width="40" height="40"></canvas>
 <div id="log"></div>

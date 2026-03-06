@@ -26,6 +26,12 @@ export function drawCannonballs(
     // Ball
     const bx = (b.x - cam.x) * TILE_PX;
     const by = (b.y - cam.y) * TILE_PX;
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = b.isPlayer ? '#ffee88' : '#ff8866';
+    ctx.beginPath();
+    ctx.arc(bx, by, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
     ctx.fillStyle = b.isPlayer ? '#ffee44' : '#ff5533';
     ctx.beginPath();
     ctx.arc(bx, by, 2.5, 0, Math.PI * 2);
@@ -45,6 +51,11 @@ export function drawParticles(
     ctx.globalAlpha = p.life / p.maxLife;
     ctx.fillStyle = p.col;
     ctx.fillRect(px - p.sz / 2, py - p.sz / 2, p.sz, p.sz);
+    if (p.col === '#ff6622' || p.col === '#ff8822') {
+      ctx.globalAlpha *= 0.35;
+      ctx.fillStyle = '#111';
+      ctx.fillRect(px - p.sz, py - p.sz, p.sz * 1.8, p.sz * 1.8);
+    }
   }
   ctx.globalAlpha = 1;
 }

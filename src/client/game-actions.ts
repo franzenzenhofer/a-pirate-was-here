@@ -3,13 +3,10 @@ import type { Camera } from '../renderer/camera';
 import { followTarget } from '../renderer/camera';
 import { buyGoods, sellGoods } from '../sim/economy/trade';
 import { getUpgradeOptions } from '../sim/economy/upgrade';
-import { resolveBoarding } from '../sim/combat/boarding';
-import { portUnderAttack } from '../sim/state/progression';
-import { createExplosion } from '../sim/combat/damage';
 import { addLog } from '../renderer/canvas/log';
 import { nearestPort, findEnemy } from './game-actions-available';
-import { addPlunder, sellPlunder } from '../sim/economy/plunder';
-import { increaseInfamy } from '../sim/state/reputation';
+import { sellPlunder } from '../sim/economy/plunder';
+import { resolveEnemyAction, resolvePortAttack } from './game-action-resolvers';
 
 export { getAvailableActions } from './game-actions-available';
 
@@ -90,7 +87,7 @@ export function executeCommand(
     addLog(np.port.name + ' now FRIENDLY!', 'g');
     return { ok: true, msg: np.port.name + ' is now friendly' };
   }
-  if (name === 'attack_port') { return attackPort(gs, np); }
+  if (name === 'attack_port') { return resolvePortAttack(gs, np); }
   if (name === 'sell_plunder') {
     const msg = sellPlunder(gs, np?.port ?? null);
     addLog(msg, msg.includes('No plunder') ? 'r' : 'g');
@@ -100,59 +97,8 @@ export function executeCommand(
   if (name === 'loot' || name === 'capture' || name === 'board' || name === 'burn') {
     const en = findEnemy(gs, Number(cmd['enemyIndex'] ?? -1));
     if (!en) return { ok: false, msg: 'No disabled enemy at that index nearby' };
-    return handleEnemyAction(gs, en, name);
+    return resolveEnemyAction(gs, en, name);
   }
 
   return { ok: false, msg: 'Unknown command: ' + name };
-}
-
-function attackPort(
-  gs: GameState, np: ReturnType<typeof nearestPort>,
-): { ok: boolean; msg: string } {
-  if (!np) return { ok: false, msg: 'No port nearby' };
-  const p = gs.player;
-  const result = portUnderAttack(np.port, p.cn, p.hp, p.maxHp, 'PIRATE');
-  if (result.success) {
-    const instantGold = ~~(np.port.wealth * 0.2);
-    p.gold += instantGold; p.fame += 60; p.kills++;
-    addPlunder(gs, 'Port Booty', Math.max(120, ~~(np.port.wealth * 0.8)), np.port.name, 1);
-    increaseInfamy(gs, 12, np.port.nat);
-    gs.particles.push(...createExplosion(np.port.x, np.port.y, '#ff4400', 20));
-    addLog(result.msg + ` +${instantGold}g now, plunder stored for sale.`, 'g');
-  } else {
-    const dmg = 2 + ~~(Math.random() * 6); p.hp = Math.max(1, p.hp - dmg);
-    addLog('REPELLED! -' + dmg + ' HP', 'r');
-  }
-  return { ok: result.success, msg: result.msg };
-}
-
-function handleEnemyAction(
-  gs: GameState, en: typeof gs.enemies[0], action: string,
-): { ok: boolean; msg: string } {
-  const p = gs.player;
-  if (action === 'loot') {
-    p.gold += en.loot; p.kills++; p.fame += en.xp; en.sunk = true;
-    gs.particles.push(...createExplosion(en.x, en.y, '#ff6622', 20));
-    addLog('Looted ' + en.tk + ': +' + en.loot + 'g', 'g');
-    return { ok: true, msg: 'Looted +' + en.loot + 'g +' + en.xp + 'fame' };
-  }
-  if (action === 'capture') {
-    p.fleet.push({ tk: en.tk }); p.fame += en.xp * 4; p.gold += ~~(en.loot * 0.3); en.sunk = true;
-    addLog(en.tk + ' joins fleet!', 'g');
-    return { ok: true, msg: en.tk + ' captured. Fleet: ' + p.fleet.length };
-  }
-  if (action === 'board') {
-    const r = resolveBoarding(p, en);
-    p.crew = Math.max(1, p.crew - r.playerCrewLost);
-    if (r.success) { p.gold += r.loot; p.fame += r.fame; p.kills++; en.sunk = true;
-      gs.particles.push(...createExplosion(en.x, en.y, '#ff6622', 20)); }
-    addLog(r.msg, r.success ? 'g' : 'r');
-    return { ok: r.success, msg: r.msg };
-  }
-  if (action === 'burn') {
-    p.fame += en.xp; en.sunk = true;
-    gs.particles.push(...createExplosion(en.x, en.y, '#ff6622', 20));
-    return { ok: true, msg: en.tk + ' burned. +' + en.xp + ' fame' };
-  }
-  return { ok: false, msg: 'Unknown action' };
 }

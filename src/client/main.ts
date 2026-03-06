@@ -1,16 +1,10 @@
-import { SHIP_TYPES } from '../config/ships';
-import { DEFAULT_SEED, WORLD_W, WORLD_H } from '../config/world';
-import { asShipId } from '../core/types';
-import type { GameState } from '../sim/state/game-state';
-import { generateWorld } from '../sim/world/gen';
-import { placePorts } from '../sim/world/ports';
-import { createWind } from '../sim/nav/wind';
-import { spawnInitialEnemies, spawnTreasures } from '../sim/state/spawn';
-import { createCamera, resize as resizeCam } from '../renderer/camera';
+import { DEFAULT_SEED } from '../config/world';
+import { resize as resizeCam } from '../renderer/camera';
 import { updateHUD } from '../renderer/canvas/hud';
 import { buildMinimapBase, drawMinimap } from '../renderer/canvas/minimap';
 import { drawCompass } from '../renderer/canvas/compass';
-import { openPortMenu, openCaptureMenu, openTradeMenu, openUpgradeMenu } from '../renderer/canvas/menus';
+import { openPortMenu, openCaptureMenu } from '../renderer/canvas/menus';
+import { openTradeMenu, openUpgradeMenu } from '../renderer/canvas/port-trade-menus';
 import { addLog } from '../renderer/canvas/log';
 import { portUnderAttack } from '../sim/state/progression';
 import { createExplosion } from '../sim/combat/damage';
@@ -29,6 +23,9 @@ import { pushArchive } from '../sim/state/archive';
 import { bindSessionUI, syncSessionUI } from './session-ui';
 import { addPlunder, sellPlunder } from '../sim/economy/plunder';
 import { increaseInfamy } from '../sim/state/reputation';
+import { resolveLegendaryVictory } from '../sim/state/objectives';
+import { loadFromStorage, saveToStorage } from './save-game';
+import { createInitialGame } from './create-game';
 
 // Canvas
 const canvas = document.getElementById('c') as HTMLCanvasElement;
@@ -37,63 +34,15 @@ ctx.imageSmoothingEnabled = false;
 let WP = window.innerWidth, HP = window.innerHeight;
 canvas.width = WP; canvas.height = HP;
 
-// World
-const world = generateWorld(DEFAULT_SEED);
-const ports = placePorts(world.tiles, DEFAULT_SEED);
-const enemies = spawnInitialEnemies(world.tiles, 55);
-const treasures = spawnTreasures(world.tiles, 35, []);
-
-// Player spawn — find open ocean near center
-const pST = SHIP_TYPES['BRIGANTINE']!;
-let spawnX = WORLD_W / 2, spawnY = WORLD_H / 2, bestDist = 99999;
-for (let y = 2; y < WORLD_H - 2; y++) {
-  for (let x = 2; x < WORLD_W - 2; x++) {
-    const t = world.tiles[y * WORLD_W + x];
-    if (t === 0 || t === 1) {
-      const d = Math.hypot(x - WORLD_W / 2, y - WORLD_H / 2);
-      if (d < bestDist) { bestDist = d; spawnX = x; spawnY = y; }
-    }
-  }
-}
-
-const player = {
-  id: asShipId(0), x: spawnX + 0.5, y: spawnY + 0.5,
-  angle: 0, speed: 0, targetX: null as number | null, targetY: null as number | null,
-  hp: pST.hp, maxHp: pST.hp, cn: pST.cn, rl: pST.rl, rng: pST.rng, acc: pST.acc,
-  bspd: pST.spd, col: pST.col, tk: 'BRIGANTINE',
-  reloadT: 0, disabled: false, sunk: false, captured: false,
-  wakePoints: [] as { x: number; y: number }[], turnRate: pST.turn, nat: 'PIRATE',
-  gold: 500, crew: 80, fame: 0, kills: 0, day: 1, dayT: 0,
-  fleet: [] as { tk: string }[],
-  cargo: [] as { good: string; qty: number; buyPrice: number }[],
-  upgrades: { hull: 0, sails: 0, range: 0 },
-};
-
-// State
-const wind = createWind();
-const cam = createCamera(player.x, player.y, WP, HP);
+const { cam, gs } = createInitialGame(DEFAULT_SEED, WP, HP);
+const { player, ports, enemies, wind } = gs;
 const morale = createMorale();
-
-const gs: GameState = {
-  seed: DEFAULT_SEED,
-  world, player, enemies, ports,
-  cannonballs: [], particles: [], treasures, wind,
-  era: 0, spawnTimer: 0, treasureTimer: 0, portWarTimer: 0,
-  activePort: null, capturedEnemy: null, tradePort: null, paused: false,
-  gameOver: false,
-  archive: [],
-  nextArchiveId: 1,
-  plunder: [],
-  reputation: 0,
-  settings: { audio: true, reducedMotion: false, textScale: 1, minimapMode: 'full' },
-  activeQuest: null,
-  activeEvent: null,
-};
 
 // Minimap + compass
 const mmCtx = (document.getElementById('minimap') as HTMLCanvasElement).getContext('2d')!;
-buildMinimapBase(mmCtx, world.tiles);
+buildMinimapBase(mmCtx, gs.world.tiles);
 const compCtx = (document.getElementById('compass') as HTMLCanvasElement).getContext('2d')!;
+if (loadFromStorage(gs)) buildMinimapBase(mmCtx, gs.world.tiles);
 
 // Resize
 window.addEventListener('resize', () => {
@@ -125,6 +74,7 @@ setupInputListeners(canvas, input, cam, (result) => {
       gs.paused = true;
       openCaptureMenu(en, player, addLog, (e, outcome) => {
         if (outcome === 'sunk') gs.particles.push(...createExplosion(e.x, e.y, '#ff6622', 20));
+        if (outcome !== 'released') resolveLegendaryVictory(gs, e.tk);
         gs.paused = false;
       });
       return;
@@ -165,7 +115,7 @@ setLogHook((msg, type) => {
 });
 mountDebugAPI(gs, cam);
 startDebugPush(gs, cam);
-bindSessionUI(() => window.location.reload());
+bindSessionUI(() => window.location.reload(), () => addLog(saveToStorage(gs), 'b'));
 
 // Game loop — throttle secondary renders
 let frameN = 0;

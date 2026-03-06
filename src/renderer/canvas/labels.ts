@@ -20,14 +20,16 @@ export function drawEnemyLabels(
     if (en.sunk || en.x < x0 || en.x > x1 || en.y < y0 || en.y > y1) continue;
     const esx = (en.x - cam.x) * TILE_PX;
     const esy = (en.y - cam.y) * TILE_PX;
-    const lc = en.role === 'PIRATE' ? '#ff88ff'
+    const isLegend = en.tk === 'DREAD_GHOST';
+    const lc = isLegend ? '#bbf8ff' : en.role === 'PIRATE' ? '#ff88ff'
       : en.role === 'MERCHANT' ? '#88ffaa'
       : en.role === 'WARSHIP' ? '#ffaa44' : '#aaccff';
     ctx.fillStyle = lc;
     ctx.fillText(en.tk, esx, esy - TILE_PX * 1.65);
+    if (isLegend) ctx.fillText('LEGEND', esx, esy - TILE_PX * 2.05);
     if (en.disabled) {
       ctx.fillStyle = '#ff5544';
-      ctx.fillText('DISABLED', esx, esy - TILE_PX * 2.05);
+      ctx.fillText('DISABLED', esx, esy - TILE_PX * (isLegend ? 2.45 : 2.05));
     }
     ctx.fillStyle = '#ffcc00';
     ctx.fillText('\u2605'.repeat(en.ti + 1), esx, esy + TILE_PX * 1.8);

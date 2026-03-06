@@ -1,8 +1,5 @@
 import type { PlayerShip, EnemyShip, Port } from '../../core/types';
 import { NATION_FLAGS } from '../../config/ports';
-import { getTradeInfo, buyGoods, sellGoods } from '../../sim/economy/trade';
-import { cargoCapacity } from '../../sim/state/fleet';
-import { getUpgradeOptions } from '../../sim/economy/upgrade';
 import { resolveBoarding } from '../../sim/combat/boarding';
 import type { LogFn } from './log';
 
@@ -99,67 +96,4 @@ export function openCaptureMenu(
   });
   menu.style.display = 'block';
   document.getElementById('cclose')!.onclick = () => { onDone(en, 'released'); close(); };
-}
-
-export function openTradeMenu(port: Port, player: PlayerShip, log: LogFn, onClose: () => void): void {
-  const menu = document.getElementById('tmenu')!;
-  document.getElementById('ttitle')!.textContent = '📦 TRADE — ' + port.name;
-  const body = document.getElementById('tbody')!;
-  function render(): void {
-    body.innerHTML = '';
-    const info = getTradeInfo(player, port);
-    for (const item of info) {
-      const row = document.createElement('div');
-      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;padding:2px 0;border-bottom:1px solid #223';
-      const label = document.createElement('span');
-      label.style.cssText = `color:${item.color};font-size:6px;font-family:inherit`;
-      const profit = item.qty > 0 ? ` ${item.profitPerUnit >= 0 ? '+' : ''}${item.profitPerUnit}g` : '';
-      label.textContent = `${item.name} ${item.tradePrice}g${profit}${item.qty > 0 ? ' (×' + item.qty + ')' : ''}`;
-      row.appendChild(label);
-      const btns = document.createElement('span');
-      if (item.qty > 0) {
-        const sb = document.createElement('button'); sb.className = 'mb g';
-        sb.style.cssText = 'width:auto;display:inline;padding:3px 6px;margin:0 2px;font-size:5px';
-        sb.textContent = 'SELL'; sb.onclick = () => {
-          const msg = sellGoods(player, port, item.name);
-          log(msg, msg.includes('loss') ? 'o' : msg.includes('Sold') ? 'g' : 'r');
-          render();
-        };
-        btns.appendChild(sb);
-      }
-      const bb = document.createElement('button'); bb.className = 'mb y';
-      bb.style.cssText = 'width:auto;display:inline;padding:3px 6px;margin:0 2px;font-size:5px';
-      bb.textContent = 'BUY'; bb.onclick = () => { const m = buyGoods(player, port, item.name, 5); log(m, m.includes('Bought') ? 'g' : 'r'); render(); };
-      btns.appendChild(bb);
-      row.appendChild(btns); body.appendChild(row);
-    }
-    const g = document.createElement('div');
-    g.style.cssText = 'color:#f0c040;font-size:6px;margin-top:8px;text-align:center';
-    const used = player.cargo.reduce((sum, item) => sum + item.qty, 0);
-    g.textContent = `💰 ${player.gold} GOLD · HOLD ${used}/${cargoCapacity(player)}`; body.appendChild(g);
-  }
-  render();
-  menu.style.display = 'block';
-  document.getElementById('tclose')!.onclick = () => { menu.style.display = 'none'; onClose(); };
-}
-
-export function openUpgradeMenu(player: PlayerShip, log: LogFn, onClose: () => void): void {
-  const menu = document.getElementById('tmenu')!;
-  document.getElementById('ttitle')!.textContent = '🛠️ SHIPYARD UPGRADES';
-  const body = document.getElementById('tbody')!;
-  body.innerHTML = '';
-  const opts = getUpgradeOptions(player);
-  for (const opt of opts) {
-    const cls = opt.canAfford ? 'g' : 'gr';
-    mkBtn(body, `${opt.name} — ${opt.description}`, cls, () => {
-      if (opt.canAfford) { const msg = opt.action(); log(msg, 'g'); }
-      else log('Not enough gold!', 'r');
-      menu.style.display = 'none'; onClose();
-    });
-  }
-  const g = document.createElement('div');
-  g.style.cssText = 'color:#f0c040;font-size:6px;margin-top:8px;text-align:center';
-  g.textContent = `💰 ${player.gold} GOLD`; body.appendChild(g);
-  menu.style.display = 'block';
-  document.getElementById('tclose')!.onclick = () => { menu.style.display = 'none'; onClose(); };
 }

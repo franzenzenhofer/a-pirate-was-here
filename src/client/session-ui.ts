@@ -1,7 +1,7 @@
 import { latestArchive } from '../sim/state/archive';
 import type { GameState } from '../sim/state/game-state';
 
-export function bindSessionUI(onRestart: () => void): void {
+export function bindSessionUI(onRestart: () => void, onSave: () => void): void {
   const restartBtn = document.getElementById('goRestart');
   if (restartBtn) restartBtn.onclick = onRestart;
 
@@ -21,11 +21,15 @@ export function bindSessionUI(onRestart: () => void): void {
       if (panel) panel.style.display = 'none';
     };
   }
+
+  const saveBtn = document.getElementById('saveBtn');
+  if (saveBtn) saveBtn.onclick = onSave;
 }
 
 export function syncSessionUI(gs: GameState): void {
   updateGameOver(gs);
   renderArchive(gs);
+  renderObjectives(gs);
 }
 
 function updateGameOver(gs: GameState): void {
@@ -45,4 +49,15 @@ function renderArchive(gs: GameState): void {
   body.innerHTML = entries.map(entry =>
     `<div class="arch ${entry.type}"><span>DAY ${entry.day}</span> ${entry.msg}</div>`
   ).join('');
+}
+
+function renderObjectives(gs: GameState): void {
+  const quest = document.getElementById('questLine');
+  const event = document.getElementById('eventLine');
+  if (quest && gs.activeQuest) {
+    quest.textContent = `${gs.activeQuest.title}: ${gs.activeQuest.progress}/${gs.activeQuest.goal}`;
+  }
+  if (event) {
+    event.textContent = gs.activeEvent?.active ? gs.activeEvent.title : 'NO LEGEND ACTIVE';
+  }
 }

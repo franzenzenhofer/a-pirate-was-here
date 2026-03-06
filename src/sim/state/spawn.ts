@@ -14,9 +14,10 @@ export function createEnemy(
   role: string, tier: string,
   nat: string | null,
   _tiles: Uint8Array,
+  forcedType?: string,
 ): EnemyShip {
   const ti = TIERS.indexOf(tier as typeof TIERS[number]);
-  const tk = shipTypeForRole(role, ti >= 0 ? ti : 0, rE());
+  const tk = forcedType ?? shipTypeForRole(role, ti >= 0 ? ti : 0, rE());
   const s = SHIP_TYPES[tk];
   if (!s) throw new Error(`Unknown ship type: ${tk}`);
 
@@ -64,6 +65,22 @@ export function spawnEdgeEnemy(tiles: Uint8Array, era: number, forceTier?: numbe
       const ti = forceTier ?? Math.min(minTier + ~~(rE() * 2), 4);
       return createEnemy(ex + 0.5, ey + 0.5, role, TIERS[ti] ?? 'EASY', null, tiles);
     }
+  }
+  return null;
+}
+
+export function spawnSpecificEdgeEnemy(
+  tiles: Uint8Array,
+  role: string,
+  tier: string,
+  nat: string,
+  shipType: string,
+): EnemyShip | null {
+  for (let att = 0; att < 200; att++) {
+    const side = ~~(rE() * 4);
+    const ex = side < 2 ? ~~(rE() * WORLD_W) : side === 2 ? 2 : WORLD_W - 3;
+    const ey = side === 0 ? 2 : side === 1 ? WORLD_H - 3 : ~~(rE() * WORLD_H);
+    if (isSail(tiles, ex, ey)) return createEnemy(ex + 0.5, ey + 0.5, role, tier, nat, tiles, shipType);
   }
   return null;
 }

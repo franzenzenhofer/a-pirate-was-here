@@ -6,10 +6,12 @@ import { NATION_FLAGS } from '../../config/ports';
 import { spawnEdgeEnemy, spawnTreasures, createEnemy } from './spawn';
 import { isSail } from '../world/gen';
 import { addLog } from '../../renderer/canvas/log';
+import { updateObjectives } from './objectives';
 
 /** Update era progression, spawning, and port wars */
 export function updateProgression(gs: GameState, dt: number): void {
   updateEra(gs);
+  updateObjectives(gs);
   updateSpawns(gs, dt);
   updateTreasureRespawn(gs, dt);
   updatePortWars(gs, dt);
