@@ -1,7 +1,8 @@
-import { addLog } from '../../renderer/canvas/log';
 import { cargoCount } from '../economy/trade';
 import type { GameState } from './game-state';
-import { spawnSpecificEdgeEnemy } from './spawn';
+import { spawnSpecificEdgeEnemyWithRng } from './spawn';
+import { emitEvent } from './events';
+import { nextRandom } from './random';
 
 const QUEST_POOL = [
   { id: 'sinkers', title: 'RAIDER HUNT', detail: 'Sink 3 ships', kind: 'combat', goal: 3, rewardGold: 220, rewardFame: 45 },
@@ -20,7 +21,7 @@ export function resolveLegendaryVictory(gs: GameState, shipType: string): void {
   gs.player.gold += gs.activeEvent.rewardGold;
   gs.player.fame += gs.activeEvent.rewardFame;
   gs.activeEvent.active = false;
-  addLog('☠️ LEGEND SLAIN: ' + gs.activeEvent.title, 'g');
+  emitEvent(gs, { kind: 'milestone', msg: '☠️ LEGEND SLAIN: ' + gs.activeEvent.title, tone: 'g' });
 }
 
 function createQuest(gs: GameState): GameState['activeQuest'] {
@@ -36,13 +37,13 @@ function updateQuest(gs: GameState): void {
   quest.completed = true;
   gs.player.gold += quest.rewardGold;
   gs.player.fame += quest.rewardFame;
-  addLog('🏆 QUEST COMPLETE: ' + quest.title, 'g');
+  emitEvent(gs, { kind: 'log', msg: '🏆 QUEST COMPLETE: ' + quest.title, tone: 'g' });
   gs.activeQuest = createQuest(gs);
 }
 
 function maybeStartLegend(gs: GameState): void {
   if (gs.activeEvent?.active || gs.player.fame < 80 || gs.era < 1) return;
-  const legend = spawnSpecificEdgeEnemy(gs.world.tiles, 'WARSHIP', 'LEGEND', 'PIRATE', 'DREAD_GHOST');
+  const legend = spawnSpecificEdgeEnemyWithRng(gs.world.tiles, 'WARSHIP', 'LEGEND', 'PIRATE', 'DREAD_GHOST', () => nextRandom(gs));
   if (!legend) return;
   gs.enemies.push(legend);
   gs.activeEvent = {
@@ -54,7 +55,7 @@ function maybeStartLegend(gs: GameState): void {
     rewardFame: 120,
     active: true,
   };
-  addLog('🌩 LEGEND AWAKENS: ' + gs.activeEvent.title, 'o');
+  emitEvent(gs, { kind: 'log', msg: '🌩 LEGEND AWAKENS: ' + gs.activeEvent.title, tone: 'o' });
 }
 
 function progressFor(gs: GameState, kind: string): number {

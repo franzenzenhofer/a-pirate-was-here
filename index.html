@@ -48,13 +48,23 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;posit
 #navpulse{position:fixed;z-index:25;pointer-events:none;display:none;width:24px;height:24px;border:2px solid rgba(255,220,60,0.6);border-radius:50%;animation:pulse 0.6s ease-out}
 @keyframes pulse{0%{transform:translate(-50%,-50%) scale(0.5);opacity:1}100%{transform:translate(-50%,-50%) scale(2.5);opacity:0}}
     #compass{position:fixed;top:142px;left:auto;right:16px;z-index:31;pointer-events:none;width:72px;height:72px}
-    #archiveBtn{position:fixed;left:16px;bottom:16px;z-index:35}
-    #settingsBtn{position:fixed;right:16px;bottom:16px;z-index:35}
+    #cornerBtns{position:fixed;right:16px;bottom:16px;z-index:35;display:flex;gap:10px}
     #questBox{position:fixed;left:16px;top:232px;z-index:34;background:rgba(4,10,20,0.88);border:1px solid #334477;padding:10px 12px;min-width:320px}
-    #questLine,#eventLine{font-size:var(--ui-font-sm);line-height:1.5}
+    #questLine,#eventLine,#fleetLine,#milestoneLine{font-size:var(--ui-font-sm);line-height:1.5}
     #questLine{color:#88ffaa}#eventLine{color:#ffcc88}
+    #fleetLine{color:#88ccff}
+    #milestoneLine{color:#f0c040}
+    #crewBox{position:fixed;right:16px;top:232px;z-index:34;background:rgba(4,10,20,0.88);border:1px solid #334477;padding:10px 12px;min-width:min(34vw,420px)}
+    #crewTitle,#crewMeta{font-size:var(--ui-font-sm);line-height:1.5}
+    #crewTitle{color:#ffcc88}
+    #crewMeta{color:#aac4ff;margin-bottom:8px}
+    .crewTrack{height:14px;background:#091224;border:2px solid #334477;overflow:hidden;margin:6px 0 10px}
+    .crewFill{height:100%;width:0%;transition:width 120ms linear}
+    #feverBar{background:linear-gradient(90deg,#ff6655,#ffbb88)}
+    #hypeBar{background:linear-gradient(90deg,#44ff88,#bbffdd)}
+    #crewActions{display:flex;flex-direction:column;gap:8px}
     .tb{font-family:inherit;font-size:var(--ui-font-sm);padding:10px 12px;background:#060d1a;border:1px solid #4458aa;color:#88ccff;cursor:pointer}
-    #combatHud{position:fixed;top:142px;left:50%;transform:translateX(-50%);z-index:34;display:none;background:rgba(4,10,20,0.92);border:1px solid #334477;padding:12px 14px;min-width:min(70vw,640px);box-shadow:0 0 16px #0008}
+    #combatHud{position:fixed;left:50%;bottom:112px;transform:translateX(-50%);z-index:34;display:none;background:rgba(4,10,20,0.92);border:1px solid #334477;padding:12px 14px;min-width:min(70vw,640px);box-shadow:0 0 16px #0008}
     #combatTitle{color:#ffcc88;font-size:var(--ui-font-md);margin-bottom:8px;text-align:center}
     #combatMeta{display:flex;justify-content:center;gap:14px;color:#88ccff;font-size:var(--ui-font-sm);margin-bottom:6px}
     .combatRow{display:grid;grid-template-columns:220px 1fr 96px;gap:12px;align-items:center;color:#aac4ff;font-size:var(--ui-font-sm);margin-top:10px}
@@ -74,27 +84,48 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;posit
     #gameover{width:min(94vw,520px);padding:24px;text-align:center}
     #goSummary{font-size:var(--ui-font-sm);line-height:1.6;color:#aac4ff;margin:14px 0 18px}
     #inspectPanel{width:min(94vw,560px);padding:20px}
-    #settingsPanel{width:min(92vw,420px);padding:20px}
+    #settingsPanel{width:min(92vw,520px);padding:20px}
+    #buildVersion{margin-top:14px;color:#88ccff;font-size:var(--ui-font-sm);line-height:1.5;word-break:break-word}
     #inspectBody{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;font-size:var(--ui-font-sm);color:#aac4ff}
     .inspectMetric{padding:8px 10px;background:#091224;border-left:3px solid #4458aa}
-    .statMeta,.statSub,.statWind,.statEra,.statFlag{font-size:var(--ui-font-sm)}
+    .settingRow{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:12px 0;color:#aac4ff;font-size:var(--ui-font-sm)}
+    .settingRow input[type="range"],.settingRow input[type="number"]{width:180px}
+    .settingRow input[type="checkbox"]{transform:scale(1.2)}
+    #milestoneList{display:flex;flex-direction:column;gap:6px;margin-top:14px}
+    .milestoneEntry{padding:8px 10px;background:#091224;border-left:3px solid #44aaff;color:#aac4ff;font-size:var(--ui-font-sm);line-height:1.4}
+    .statMeta,.statSub,.statWind,.statEra,.statFlag,.statLabel,.flagBadge{font-size:var(--ui-font-sm)}
     .statMeta{color:#aac4ff;margin-bottom:4px}
     .statSub{margin-top:8px;color:#88ccff}
     .statWind{color:#88aaff}
     .statEra{color:#ff8866}
-    .statFlag{color:#88ccff}
+    .statFlag{display:flex;align-items:center;gap:8px;color:#88ccff;background:rgba(10,18,36,0.75);padding:4px 6px;border-left:3px solid #4458aa;max-width:max-content;flex-wrap:wrap}
+    .statLabel{color:#aac4ff}
+    .flagBadge{display:inline-flex;align-items:center;justify-content:center;min-width:48px;padding:4px 6px;border:2px solid #f2f4f8;background:#111318;color:#f2f4f8;line-height:1}
     @media (max-width: 960px){
       #topbar{grid-template-columns:1fr;gap:10px}
       .sc,.sc.r,.sc.c{text-align:left}
       #hpbar{justify-content:flex-start}
       #compass{top:auto;left:auto;bottom:16px;right:16px}
       #questBox{top:244px;right:16px;min-width:0}
-      #combatHud{left:16px;right:16px;transform:none;top:392px;min-width:0}
+      #crewBox{top:auto;left:16px;right:16px;bottom:176px;min-width:0}
+      #combatHud{left:16px;right:16px;bottom:168px;transform:none;min-width:0}
       .combatRow{grid-template-columns:1fr;gap:8px}
       .combatValue{text-align:left}
       #log{bottom:96px;max-width:calc(100vw - 32px)}
-      #archiveBtn,#settingsBtn{bottom:16px}
+      #cornerBtns{right:16px;bottom:16px}
       #inspectBody{grid-template-columns:1fr}
+    }
+    body.reduced-motion .le,
+    body.reduced-motion .le.out,
+    body.reduced-motion .crewFill,
+    body.reduced-motion .combatFill{animation:none;transition:none}
+    body.color-safe .combatFill.player,
+    body.color-safe .combatFill.enemy,
+    body.color-safe .combatFill.hull.player,
+    body.color-safe .combatFill.hull.enemy,
+    body.color-safe #feverBar,
+    body.color-safe #hypeBar{
+      background-image:repeating-linear-gradient(135deg,rgba(255,255,255,0.45) 0 6px,rgba(0,0,0,0.15) 6px 12px);
     }
 </style>
 </head>
@@ -104,7 +135,7 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;posit
   <div id="topbar">
     <div class="sc">
       <div>⚓ <span id="snEl">BLACK TIDE</span></div>
-      <div class="statFlag" id="sfEl">🏴‍☠️ PIRATE COLORS</div>
+      <div class="statFlag"><span class="statLabel">UNDER</span><span id="sfBadge" class="flagBadge">PIR</span><span id="sfEl">BLACK FLAG</span></div>
       <div>💰 <span id="gEl">500</span> GOLD</div>
       <div>👥 <span id="cEl">80</span> CREW</div>
       <div>📅 DAY <span id="dEl">1</span></div>
@@ -123,29 +154,38 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;posit
     </div>
   </div>
 </div>
-<button class="tb" id="archiveBtn">LOG</button>
-<button class="tb" id="settingsBtn">SETTINGS</button>
-<div id="questBox"><div id="questLine">QUEST: NONE</div><div id="eventLine">NO LEGEND ACTIVE</div></div>
+<div id="cornerBtns"><button class="tb" id="archiveBtn">LOG</button><button class="tb" id="settingsBtn">SETTINGS</button></div>
+<div id="questBox"><div id="questLine">QUEST: NONE</div><div id="eventLine">NO LEGEND ACTIVE</div><div id="fleetLine">FLEET: SOLO</div><div id="milestoneLine">SEED 42</div></div>
+<div id="crewBox">
+  <div id="crewTitle">CREW STATE</div>
+  <div id="crewMeta">CALM SEAS</div>
+  <div class="crewTrack"><div class="crewFill" id="feverBar"></div></div>
+  <div class="crewTrack"><div class="crewFill" id="hypeBar"></div></div>
+  <div id="crewActions">
+    <button class="tb" id="shareLootBtn" type="button">SHARE LOOT &amp; PASS THE RUM</button>
+    <button class="tb" id="breakFogBtn" type="button">BLAST THE FOG</button>
+  </div>
+</div>
 <div id="combatHud">
   <div id="combatTitle">ENGAGING</div>
   <div id="combatMeta">DIST 0.0 · AUTO-FIRE INSIDE RANGE</div>
   <div class="combatRow">
-    <div>YOUR BOAT HEALTH</div>
+    <div id="playerHullLabel">YOUR BOAT HEALTH</div>
     <div class="combatTrack"><div class="combatFill hull player" id="playerHullBar"></div></div>
     <div class="combatValue" id="playerHullText">14/14</div>
   </div>
   <div class="combatRow">
-    <div>ENEMY BOAT HEALTH</div>
+    <div id="enemyHullLabel">ENEMY BOAT HEALTH</div>
     <div class="combatTrack"><div class="combatFill hull enemy" id="enemyHullBar"></div></div>
     <div class="combatValue" id="enemyHullText">10/10</div>
   </div>
   <div class="combatRow">
-    <div>YOUR BROADSIDE</div>
+    <div id="playerReloadLabel">YOUR BROADSIDE</div>
     <div class="combatTrack"><div class="combatFill player" id="playerReloadBar"></div></div>
     <div class="combatValue" id="playerReloadText">READY</div>
   </div>
   <div class="combatRow">
-    <div>ENEMY BROADSIDE</div>
+    <div id="enemyReloadLabel">ENEMY BROADSIDE</div>
     <div class="combatTrack"><div class="combatFill enemy" id="enemyReloadBar"></div></div>
     <div class="combatValue" id="enemyReloadText">READY</div>
   </div>
@@ -160,7 +200,23 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;posit
 <div id="era"><div class="etxt" id="eraTxt"></div></div>
 <div id="gameover"><h3>YOUR SHIP WAS LOST</h3><div id="goSummary"></div><button class="tb" id="goRestart" type="button">SET SAIL AGAIN</button></div>
 <div id="inspectPanel"><h3 id="inspectTitle">SHIP REPORT</h3><div id="inspectBody"></div><div class="mc" id="inspectClose">[ CLOSE ]</div></div>
-<div id="settingsPanel"><h3>SETTINGS</h3><button class="tb" id="saveNowBtn">SAVE NOW</button><button class="tb r" id="startFreshBtn">START FRESH GAME</button><div class="mc" id="settingsClose">[ CLOSE ]</div></div>
+<div id="settingsPanel">
+  <h3>SETTINGS</h3>
+  <button class="tb" id="saveNowBtn">SAVE NOW</button>
+  <button class="tb r" id="startFreshBtn">START FRESH GAME</button>
+  <div class="settingRow"><span>MASTER AUDIO</span><input id="masterAudioInput" type="checkbox" checked></div>
+  <div class="settingRow"><span>TEXT SCALE</span><input id="textScaleInput" type="range" min="1" max="2" step="0.1" value="1"></div>
+  <div class="settingRow"><span>REDUCED MOTION</span><input id="reducedMotionInput" type="checkbox"></div>
+  <div class="settingRow"><span>COLOR SAFE HUD</span><input id="colorSafeInput" type="checkbox"></div>
+  <div class="settingRow"><span>SEA AUDIO</span><input id="seaAudioInput" type="range" min="0" max="1" step="0.05" value="0.7"></div>
+  <div class="settingRow"><span>MUSIC AUDIO</span><input id="musicAudioInput" type="range" min="0" max="1" step="0.05" value="0.6"></div>
+  <div class="settingRow"><span>SEED</span><input id="seedInput" type="number" min="1" step="1" value="42"></div>
+  <button class="tb" id="copySeedBtn">COPY ACTIVE SEED</button>
+  <button class="tb" id="applySeedBtn">START NEW VOYAGE WITH SEED</button>
+  <div id="milestoneList"></div>
+  <div id="buildVersion">BUILD dev</div>
+  <div class="mc" id="settingsClose">[ CLOSE ]</div>
+</div>
 <div id="navpulse"></div>
 <script type="module" src="/src/client/main.ts"></script>
 </body>

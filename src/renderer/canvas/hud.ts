@@ -1,10 +1,13 @@
+import { displaySailingFlag, displayShipFlag, displayShipName, shipNationStyle } from '../../core/ship-identity';
 import type { PlayerShip } from '../../core/types';
 import { windDirStr, windStrBar } from '../../sim/nav/wind';
 import type { WindState } from '../../sim/nav/wind';
 
 /** Update all HUD DOM elements */
 export function updateHUD(player: PlayerShip, era: number, wind: WindState): void {
-  setText('snEl', player.tk);
+  setText('snEl', displayShipName(player));
+  setText('sfBadge', displayShipFlag(player));
+  setText('sfEl', displaySailingFlag(player));
   setText('gEl', String(player.gold));
   setText('cEl', String(player.crew));
   setText('dEl', String(player.day));
@@ -15,6 +18,7 @@ export function updateHUD(player: PlayerShip, era: number, wind: WindState): voi
   setText('eraEl', ['I', 'II', 'III', 'IV', 'V'][Math.min(era, 4)] ?? 'I');
   setText('wdEl', windDirStr(wind.angle));
   setText('wsEl', windStrBar(wind.strength));
+  applyFlagBadge(player);
 
   updateHealthBar(player.hp, player.maxHp);
 }
@@ -22,6 +26,16 @@ export function updateHUD(player: PlayerShip, era: number, wind: WindState): voi
 function setText(id: string, text: string): void {
   const el = document.getElementById(id);
   if (el) el.textContent = text;
+}
+
+function applyFlagBadge(player: Pick<PlayerShip, 'flag' | 'nat'>): void {
+  const badge = document.getElementById('sfBadge');
+  if (!badge) return;
+  const style = shipNationStyle(player);
+  badge.setAttribute('data-nation', style.code);
+  badge.style.backgroundColor = style.primary;
+  badge.style.borderColor = style.accent;
+  badge.style.color = style.text;
 }
 
 let lastHp = -1;

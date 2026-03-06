@@ -1,5 +1,6 @@
 import { TILE_PX } from '../../config/world';
 import type { Vec2 } from '../../core/types';
+import { drawNationPennant } from './pennants';
 
 /** Draw a ship sprite — broadside cannons on correct sides, detailed rigging */
 export function drawShip(
@@ -7,18 +8,54 @@ export function drawShip(
   sx: number, sy: number,
   ang: number, col: string, tk: string,
   scale: number, disabled: boolean,
+  nation: string,
+  hpRatio: number = 1,
 ): void {
   const hull = shipHullFor(tk);
   ctx.save();
   ctx.translate(sx, sy);
   ctx.rotate(ang + Math.PI / 2);
   const s = TILE_PX * 0.36 * scale;
+  const isGhost = tk === 'DREAD_GHOST';
+  const isMonster = tk === 'MEGALODON' || tk === 'CRAB_LEVIATHAN';
+  const isBurning = tk === 'FIRESHIP' || hpRatio < 0.35;
+
+  if (tk === 'MEGALODON') {
+    ctx.globalAlpha = 0.95;
+    ctx.fillStyle = '#7a8998';
+    ctx.beginPath();
+    ctx.moveTo(0, -s * 2.1);
+    ctx.lineTo(-s * 0.6, s * 0.8);
+    ctx.lineTo(0, s * 0.2);
+    ctx.lineTo(s * 0.6, s * 0.8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#dbe7ef';
+    ctx.fillRect(-1, -s * 1.4, 2, s * 0.9);
+    ctx.restore();
+    return;
+  }
+
+  if (tk === 'CRAB_LEVIATHAN') {
+    ctx.fillStyle = '#8b6540';
+    ctx.fillRect(-s * 1.1, -s * 0.9, s * 2.2, s * 1.8);
+    ctx.fillStyle = '#d0a76b';
+    ctx.fillRect(-s * 0.5, -s * 0.55, s, s * 0.5);
+    for (const lx of [-1, 1]) {
+      for (const ly of [-0.9, -0.3, 0.3, 0.9]) {
+        ctx.fillRect(lx * s * 1.1, ly * s * 0.6, lx * s * 0.35, s * 0.1);
+      }
+    }
+    ctx.restore();
+    return;
+  }
 
   // Shadow
   ctx.fillStyle = 'rgba(0,0,0,0.25)';
   ctx.fillRect(-s * hull.w * 0.5 + 1, -s * hull.l * 0.5 + 1, s * hull.w, s * hull.l);
 
   // Hull
+  ctx.globalAlpha = isGhost ? 0.7 : 1;
   ctx.fillStyle = disabled ? '#443322' : col;
   ctx.fillRect(-s * hull.w * 0.5, -s * hull.l * 0.46, s * hull.w, s * hull.l * 0.92);
 
@@ -88,12 +125,11 @@ export function drawShip(
   }
 
   if (!disabled) {
-    ctx.fillStyle = hull.flag;
-    ctx.fillRect(-s * 0.05, -s * hull.l * 0.82, s * 0.48, s * 0.18);
+    drawNationPennant(ctx, -s * 0.05, -s * hull.l * 0.9, nation, Math.max(0.35, s * 0.12));
   }
 
-  if (tk === 'DREAD_GHOST' && !disabled) {
-    ctx.fillStyle = 'rgba(180,255,255,0.2)';
+  if (isGhost && !disabled) {
+    ctx.fillStyle = 'rgba(180,255,255,0.24)';
     ctx.fillRect(-s * 1.1, -s * 1.8, s * 2.2, s * 3.2);
   }
 
@@ -102,21 +138,44 @@ export function drawShip(
     ctx.fillRect(-s * 0.4, -s * 0.7, s * 0.8, s * 0.9);
   }
 
+  if (disabled) {
+    ctx.strokeStyle = '#c18a44';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.45, -s * 0.35);
+    ctx.lineTo(s * 0.45, s * 0.35);
+    ctx.moveTo(s * 0.45, -s * 0.35);
+    ctx.lineTo(-s * 0.45, s * 0.35);
+    ctx.stroke();
+  }
+
+  if (!isMonster && hpRatio < 0.68) {
+    ctx.fillStyle = 'rgba(35,35,35,0.42)';
+    ctx.fillRect(-s * 0.12, -s * 1.2, s * 0.22, s * 0.38);
+    ctx.fillRect(s * 0.14, -s * 1.45, s * 0.3, s * 0.46);
+  }
+
+  if (isBurning && !disabled) {
+    ctx.fillStyle = 'rgba(255,190,70,0.45)';
+    ctx.fillRect(-s * 0.26, -s * 0.7, s * 0.52, s * 0.52);
+  }
+
+  ctx.globalAlpha = 1;
   ctx.restore();
 }
 
 function shipHullFor(tk: string): {
-  w: number; l: number; sailW: number; mainSail: number; masts: number; guns: number; flag: string;
+  w: number; l: number; sailW: number; mainSail: number; masts: number; guns: number;
 } {
-  if (tk === 'CUTTER') return { w: 0.72, l: 2.2, sailW: 0.42, mainSail: 0.7, masts: 1, guns: 1, flag: '#6ee7ff' };
-  if (tk === 'SLOOP') return { w: 0.82, l: 2.4, sailW: 0.48, mainSail: 0.82, masts: 1, guns: 1, flag: '#8cffc8' };
-  if (tk === 'BRIGANTINE') return { w: 0.9, l: 2.62, sailW: 0.54, mainSail: 1.08, masts: 2, guns: 2, flag: '#56b9ff' };
-  if (tk === 'CORVETTE') return { w: 0.95, l: 2.76, sailW: 0.58, mainSail: 1.14, masts: 2, guns: 3, flag: '#d8a8ff' };
-  if (tk === 'FRIGATE') return { w: 1.04, l: 2.96, sailW: 0.6, mainSail: 1.18, masts: 2, guns: 3, flag: '#ffbe68' };
-  if (tk === 'FIRESHIP') return { w: 0.86, l: 2.45, sailW: 0.45, mainSail: 0.74, masts: 1, guns: 2, flag: '#ff6655' };
-  if (tk === 'GALLEON') return { w: 1.1, l: 3.12, sailW: 0.62, mainSail: 1.22, masts: 3, guns: 4, flag: '#ff9d4d' };
-  if (tk === 'DREAD_GHOST') return { w: 1.05, l: 3.08, sailW: 0.6, mainSail: 1.18, masts: 3, guns: 4, flag: '#d9ffff' };
-  return { w: 1.12, l: 3.28, sailW: 0.64, mainSail: 1.24, masts: 3, guns: 4, flag: '#ff4444' };
+  if (tk === 'CUTTER') return { w: 0.72, l: 2.2, sailW: 0.42, mainSail: 0.7, masts: 1, guns: 1 };
+  if (tk === 'SLOOP') return { w: 0.82, l: 2.4, sailW: 0.48, mainSail: 0.82, masts: 1, guns: 1 };
+  if (tk === 'BRIGANTINE') return { w: 0.9, l: 2.62, sailW: 0.54, mainSail: 1.08, masts: 2, guns: 2 };
+  if (tk === 'CORVETTE') return { w: 0.95, l: 2.76, sailW: 0.58, mainSail: 1.14, masts: 2, guns: 3 };
+  if (tk === 'FRIGATE') return { w: 1.04, l: 2.96, sailW: 0.6, mainSail: 1.18, masts: 2, guns: 3 };
+  if (tk === 'FIRESHIP') return { w: 0.86, l: 2.45, sailW: 0.45, mainSail: 0.74, masts: 1, guns: 2 };
+  if (tk === 'GALLEON') return { w: 1.1, l: 3.12, sailW: 0.62, mainSail: 1.22, masts: 3, guns: 4 };
+  if (tk === 'DREAD_GHOST') return { w: 1.05, l: 3.08, sailW: 0.6, mainSail: 1.18, masts: 3, guns: 4 };
+  return { w: 1.12, l: 3.28, sailW: 0.64, mainSail: 1.24, masts: 3, guns: 4 };
 }
 
 /** Draw ship wake trail */

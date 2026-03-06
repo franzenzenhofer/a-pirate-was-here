@@ -1,3 +1,4 @@
+import { displayShipName } from '../core/ship-identity';
 import type { EnemyShip, PlayerShip } from '../core/types';
 import type { GameState } from '../sim/state/game-state';
 
@@ -10,22 +11,34 @@ export interface ReloadMeter {
 }
 
 export interface CombatHudState {
+  playerName: string;
   targetName: string;
   distance: number;
   player: ReloadMeter;
   enemy: ReloadMeter;
+  playerHull: HullMeter;
+  enemyHull: HullMeter;
+}
+
+export interface HullMeter {
+  label: string;
+  progress: number;
 }
 
 export function getCombatHudState(gs: GameState): CombatHudState | null {
+  if (gs.gameOver || gs.player.hp <= 0) return null;
   const target = selectCombatTarget(gs.player, gs.enemies);
   if (!target) return null;
 
   const distance = Math.hypot(gs.player.x - target.x, gs.player.y - target.y);
   return {
-    targetName: target.tk,
+    playerName: displayShipName(gs.player),
+    targetName: displayShipName(target),
     distance,
     player: createReloadMeter(gs.player.reloadT, gs.player.rl),
     enemy: createReloadMeter(target.reloadT, target.rl),
+    playerHull: createHullMeter(gs.player.hp, gs.player.maxHp),
+    enemyHull: createHullMeter(target.hp, target.maxHp),
   };
 }
 
@@ -59,6 +72,18 @@ export function createReloadMeter(reloadT: number, reloadMs: number): ReloadMete
     label: remainingMs <= 0 ? 'READY' : `${(remainingMs / 1000).toFixed(1)}s`,
     progress: clamp(progress, 0, 1),
     remainingMs,
+  };
+}
+
+export function createHullMeter(hp: number, maxHp: number): HullMeter {
+  const totalHp = Math.max(1, maxHp);
+  const currentHp = clamp(hp, 0, totalHp);
+  const visibleHp = Math.max(0, Math.round(currentHp));
+  const visibleMaxHp = Math.max(1, Math.round(totalHp));
+
+  return {
+    label: `${visibleHp}/${visibleMaxHp}`,
+    progress: clamp(currentHp / totalHp, 0, 1),
   };
 }
 

@@ -2,34 +2,24 @@ import { describe, it, expect } from 'vitest';
 import { resolveBoarding } from './boarding';
 import { asShipId } from '../../core/types';
 import type { PlayerShip, EnemyShip } from '../../core/types';
+import { createTestEnemy, createTestPlayer } from '../../test/fixtures';
 
 function mkPlayer(overrides: Partial<PlayerShip> = {}): PlayerShip {
-  return {
-    id: asShipId(0), x: 0, y: 0, angle: 0, speed: 0,
-    targetX: null, targetY: null,
-    hp: 14, maxHp: 14, cn: 8, rl: 5500, rng: 5.5, acc: 0.6,
-    bspd: 1.1, col: '#44aaff', tk: 'BRIGANTINE',
-    reloadT: 0, disabled: false, sunk: false, captured: false,
-    wakePoints: [], turnRate: 1.0, nat: 'PIRATE',
-    gold: 500, crew: 80, fame: 0, kills: 0, day: 1, dayT: 0, fleet: [], cargo: [],
-    upgrades: { hull: 0, sails: 0, range: 0 },
-    ...overrides,
-  };
+  return createTestPlayer({ id: asShipId(0), bspd: 1.1, ...overrides });
 }
 
 function mkEnemy(): EnemyShip {
-  return {
-    id: asShipId(1), x: 1, y: 1, angle: 0, speed: 0,
-    targetX: null, targetY: null,
-    hp: 2, maxHp: 8, cn: 4, rl: 4500, rng: 4.5, acc: 0.55,
-    bspd: 1.4, col: '#88ffaa', tk: 'SLOOP',
-    reloadT: 0, disabled: true, sunk: false, captured: false,
-    wakePoints: [], turnRate: 1.2, nat: 'SPAIN',
-    role: 'MERCHANT', tier: 'EASY', ti: 0,
+  return createTestEnemy({
+    id: asShipId(1),
+    hp: 2,
+    maxHp: 8,
+    bspd: 1.4,
+    disabled: true,
+    tier: 'EASY',
     beh: { aggro: 0, flee: 0.6, wander: true, portAttack: false },
-    state: 'WANDER', stTimer: 0, changeT: 300,
-    loot: 150, xp: 1, homePort: null, attackTarget: null,
-  };
+    changeT: 300,
+    loot: 150,
+  });
 }
 
 describe('resolveBoarding', () => {

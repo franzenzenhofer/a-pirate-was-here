@@ -1,4 +1,5 @@
 import { WIND_CHANGE_MIN, WIND_CHANGE_VAR } from '../../config/world';
+import { mkRawRng } from '../../core/rng';
 
 export interface WindState {
   angle: number;
@@ -6,20 +7,21 @@ export interface WindState {
   timer: number;
 }
 
-export function createWind(): WindState {
+export function createWind(seed: number): WindState {
+  const rng = mkRawRng(seed + 901);
   return {
-    angle: Math.random() * Math.PI * 2,
-    strength: 0.6 + Math.random() * 0.4,
+    angle: rng() * Math.PI * 2,
+    strength: 0.6 + rng() * 0.4,
     timer: 0,
   };
 }
 
-export function updateWind(wind: WindState, dt: number): void {
+export function updateWind(wind: WindState, dt: number, nextRandom: () => number): void {
   wind.timer += dt;
-  if (wind.timer > WIND_CHANGE_MIN + Math.random() * WIND_CHANGE_VAR) {
+  if (wind.timer > WIND_CHANGE_MIN + nextRandom() * WIND_CHANGE_VAR) {
     wind.timer = 0;
-    wind.angle += (Math.random() - 0.5) * Math.PI * 0.8;
-    wind.strength = 0.35 + Math.random() * 0.75;
+    wind.angle += (nextRandom() - 0.5) * Math.PI * 0.8;
+    wind.strength = 0.35 + nextRandom() * 0.75;
   }
 }
 

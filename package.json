@@ -4,7 +4,9 @@
   "description": "The ultimate pirate map game — open-world Caribbean adventure",
   "type": "module",
   "scripts": {
+    "build:version": "node scripts/write-build-version.mjs",
     "dev": "vite",
+    "prebuild": "npm run build:version",
     "build": "tsc --noEmit && vite build",
     "test": "vitest",
     "test:run": "vitest run",

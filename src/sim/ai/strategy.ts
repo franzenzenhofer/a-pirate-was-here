@@ -1,6 +1,10 @@
+import type { GameState } from '../state/game-state';
 import type { EnemyShip, PlayerShip } from '../../core/types';
 import { angleTo } from '../../core/math';
 import { isSail } from '../world/gen';
+import { emitEvent } from '../state/events';
+import { randomChance, randomFloat } from '../state/random';
+import { spawnCargoPickup } from '../state/pickups';
 
 /** Vision range — AI only reacts to what it can "see" (fog of war) */
 const VISION_RANGE = 18;
@@ -25,11 +29,12 @@ function transition(en: EnemyShip, to: string, reason: string): void {
  * FOG OF WAR: AI only acts on player within VISION_RANGE — no cheating.
  */
 export function updateAIState(
+  gs: GameState,
   en: EnemyShip,
-  player: PlayerShip,
   dt: number,
   tiles: Uint8Array,
 ): void {
+  const player = gs.player;
   if (en.sunk || en.captured || en.disabled) return;
 
   const dpP = Math.hypot(en.x - player.x, en.y - player.y);
@@ -43,7 +48,7 @@ export function updateAIState(
     transition(en, 'FLEE', 'hp=' + ~~(en.hp / en.maxHp * 100) + '% < flee=' + ~~(en.beh.flee * 100) + '%');
   } else if (shouldFlee && en.state === 'FLEE' && !canSeePlayer) {
     transition(en, 'WANDER', 'lost sight while fleeing');
-  } else if (canSeePlayer && dpP < 12 && en.beh.aggro > 0 && Math.random() < en.beh.aggro * 0.002 * dt) {
+  } else if (canSeePlayer && dpP < 12 && en.beh.aggro > 0 && randomChance(gs, en.beh.aggro * 0.002 * dt)) {
     transition(en, 'CHASE', 'spotted player d=' + ~~dpP + ' aggro=' + ~~(en.beh.aggro * 100) + '%');
     en.stTimer = 0;
   } else if (en.attackTarget) {
@@ -56,10 +61,10 @@ export function updateAIState(
   if (en.state === 'WANDER') {
     en.changeT -= dt;
     if (en.changeT < 0) {
-      en.changeT = 3000 + Math.random() * 4000;
+      en.changeT = 3000 + randomFloat(gs, 0, 4000);
       for (let a = 0; a < 20; a++) {
-        const wx = en.x + (Math.random() - 0.5) * 30;
-        const wy = en.y + (Math.random() - 0.5) * 30;
+        const wx = en.x + (randomFloat(gs, 0, 1) - 0.5) * 30;
+        const wy = en.y + (randomFloat(gs, 0, 1) - 0.5) * 30;
         if (isSail(tiles, ~~wx, ~~wy)) {
           en.targetX = wx;
           en.targetY = wy;
@@ -67,6 +72,14 @@ export function updateAIState(
         }
       }
     }
+  }
+
+  if (canSeePlayer && en.role === 'MERCHANT' && !en.intimidated && player.fame > 500 && dpP < 8) {
+    en.intimidated = true;
+    en.cargoDropDone = true;
+    en.state = 'FLEE';
+    spawnCargoPickup(gs, en.x + 0.5, en.y, Math.max(60, Math.round(en.loot * 0.35)), en.name ?? en.tk);
+    emitEvent(gs, { kind: 'log', msg: `${en.name ?? en.tk} panics and dumps cargo overboard!`, tone: 'o' });
   }
 }
 
@@ -114,7 +127,7 @@ export function shouldFireAtEnemy(en: EnemyShip, other: EnemyShip): boolean {
   const hostile =
     (en.role === 'PIRATE' && other.role === 'MERCHANT') ||
     (en.role === 'WARSHIP' && other.role === 'PIRATE') ||
-    (en.role === 'PIRATE' && other.role === 'WARSHIP' && Math.random() < 0.3);
+    (en.role === 'PIRATE' && other.role === 'WARSHIP');
 
   if (!hostile) return false;
 

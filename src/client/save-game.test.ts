@@ -1,26 +1,38 @@
 import { describe, expect, it } from 'vitest';
 import { asShipId } from '../core/types';
 import type { GameState } from '../sim/state/game-state';
-import { applySnapshot, snapshotGame } from './save-game';
+import { applySnapshot, prepareFreshStart, shouldLoadFromStorage, snapshotGame } from './save-game';
+import { createTestPlayer, createTestSettings, createTestState } from '../test/fixtures';
 
 function mkState(): GameState {
-  return {
+  return createTestState({
     seed: 42,
     world: { tiles: Uint8Array.from([0, 1, 2]), variation: Uint8Array.from([0, 1, 2]), heightmap: Float32Array.from([0, 0.5, 1]) },
-    player: {
-      id: asShipId(0), x: 1, y: 2, angle: 0, speed: 0, targetX: null, targetY: null,
-      hp: 10, maxHp: 12, cn: 4, rl: 4000, rng: 4, acc: 0.5, bspd: 2, col: '#fff', tk: 'SLOOP',
-      reloadT: 0, disabled: false, sunk: false, captured: false, wakePoints: [], turnRate: 1, nat: 'PIRATE',
-      gold: 120, crew: 50, fame: 20, kills: 1, day: 3, dayT: 0, fleet: [{ tk: 'CUTTER' }], cargo: [],
+    player: createTestPlayer({
+      id: asShipId(0),
+      x: 1,
+      y: 2,
+      hp: 10,
+      maxHp: 12,
+      cn: 4,
+      rl: 4000,
+      rng: 4,
+      acc: 0.5,
+      bspd: 2,
+      col: '#fff',
+      tk: 'SLOOP',
+      gold: 120,
+      crew: 50,
+      fame: 20,
+      kills: 1,
+      day: 3,
+      fleet: [{ tk: 'CUTTER' }],
       upgrades: { hull: 1, sails: 0, range: 2 },
-    },
-    enemies: [], ports: [], cannonballs: [], particles: [], treasures: [], wind: { angle: 0, strength: 1, timer: 0 },
-    era: 1, spawnTimer: 0, treasureTimer: 0, portWarTimer: 0,
-    activePort: null, capturedEnemy: null, tradePort: null, paused: false, gameOver: false,
-    archive: [], nextArchiveId: 1, plunder: [], reputation: 4,
-    settings: { audio: true, reducedMotion: false, textScale: 1, minimapMode: 'full' },
-    activeQuest: null, activeEvent: null,
-  };
+    }),
+    era: 1,
+    reputation: 4,
+    settings: createTestSettings({ minimapMode: 'full', preferredSeed: 42 }),
+  });
 }
 
 describe('save-game', () => {
@@ -32,5 +44,31 @@ describe('save-game', () => {
     expect(restored.player.gold).toBe(original.player.gold);
     expect(restored.player.upgrades.range).toBe(2);
     expect(Array.from(restored.world.tiles)).toEqual([0, 1, 2]);
+  });
+
+  it('skips saved game loading once after starting fresh', () => {
+    const session = new Map<string, string>();
+    const local = new Map<string, string>();
+    Object.defineProperty(globalThis, 'sessionStorage', {
+      value: {
+        getItem: (key: string) => session.get(key) ?? null,
+        setItem: (key: string, value: string) => { session.set(key, value); },
+        removeItem: (key: string) => { session.delete(key); },
+      },
+      configurable: true,
+    });
+    Object.defineProperty(globalThis, 'localStorage', {
+      value: {
+        getItem: (key: string) => local.get(key) ?? null,
+        setItem: (key: string, value: string) => { local.set(key, value); },
+        removeItem: (key: string) => { local.delete(key); },
+      },
+      configurable: true,
+    });
+
+    prepareFreshStart();
+
+    expect(shouldLoadFromStorage()).toBe(false);
+    expect(shouldLoadFromStorage()).toBe(true);
   });
 });

@@ -7,6 +7,9 @@ import { addLog } from '../renderer/canvas/log';
 import { nearestPort, findEnemy } from './game-actions-available';
 import { sellPlunder } from '../sim/economy/plunder';
 import { resolveEnemyAction, resolvePortAttack } from './game-action-resolvers';
+import { buyDrinksForTown, demandTribute, serviceProfile } from '../sim/state/port-actions';
+import { shareLootAndPassRum } from '../sim/state/crew-chaos';
+import { tryBreakSirenFog } from '../sim/state/encounters';
 
 export { getAvailableActions } from './game-actions-available';
 
@@ -28,6 +31,17 @@ export function executeCommand(
   if (name === 'resume') { gs.paused = false; return { ok: true, msg: 'Resumed' }; }
   if (name === 'heal') { p.hp = p.maxHp; return { ok: true, msg: 'Healed' }; }
   if (name === 'gold') { p.gold += Number(cmd['amount'] ?? 10000); return { ok: true, msg: 'Gold added' }; }
+  if (name === 'share_loot') {
+    const msg = shareLootAndPassRum(gs);
+    addLog(msg, msg.includes('No fresh loot') ? 'o' : 'g');
+    return { ok: !msg.includes('No fresh loot'), msg };
+  }
+  if (name === 'break_fog') {
+    const ok = tryBreakSirenFog(gs);
+    const msg = ok ? 'Siren trance broken.' : 'No siren fog nearby.';
+    addLog(msg, ok ? 'b' : 'o');
+    return { ok, msg };
+  }
   if (name === 'teleport') {
     p.x = Number(cmd['x']); p.y = Number(cmd['y']);
     followTarget(cam, p.x, p.y, 1.0);
@@ -38,7 +52,8 @@ export function executeCommand(
 
   if (name === 'repair') {
     if (!np || np.port.rel !== 'friendly') return { ok: false, msg: 'No friendly port nearby' };
-    const cost = ~~(p.maxHp * 18), amt = ~~(p.maxHp * 0.6);
+    const services = serviceProfile(np.port, p);
+    const cost = ~~(p.maxHp * 18 * services.repairFactor), amt = ~~(p.maxHp * Math.min(0.85, services.repairFactor + 0.1));
     if (p.gold < cost) return { ok: false, msg: 'Need ' + cost + 'g' };
     p.gold -= cost; p.hp = Math.min(p.maxHp, p.hp + amt);
     addLog('Repaired at ' + np.port.name, 'g');
@@ -46,17 +61,19 @@ export function executeCommand(
   }
   if (name === 'recruit') {
     if (!np || np.port.rel !== 'friendly') return { ok: false, msg: 'No friendly port nearby' };
-    if (p.gold < 50) return { ok: false, msg: 'Need 50g' };
-    p.gold -= 50; p.crew = Math.min(250, p.crew + 10);
-    addLog('+10 crew', 'g');
-    return { ok: true, msg: '+10 crew for 50g' };
+    const services = serviceProfile(np.port, p);
+    if (p.gold < services.recruitCost) return { ok: false, msg: 'Need ' + services.recruitCost + 'g' };
+    p.gold -= services.recruitCost; p.crew = Math.min(250, p.crew + services.recruitCount);
+    addLog('+' + services.recruitCount + ' crew', 'g');
+    return { ok: true, msg: '+' + services.recruitCount + ' crew for ' + services.recruitCost + 'g' };
   }
   if (name === 'buy_cannon') {
     if (!np || np.port.rel !== 'friendly') return { ok: false, msg: 'No friendly port nearby' };
-    if (p.gold < 150) return { ok: false, msg: 'Need 150g' };
-    p.gold -= 150; p.cn++;
+    const services = serviceProfile(np.port, p);
+    if (p.gold < services.cannonCost) return { ok: false, msg: 'Need ' + services.cannonCost + 'g' };
+    p.gold -= services.cannonCost; p.cn++;
     addLog('Cannon acquired!', 'g');
-    return { ok: true, msg: 'Cannon purchased for 150g. Now ' + p.cn + ' cannons' };
+    return { ok: true, msg: 'Cannon purchased for ' + services.cannonCost + 'g. Now ' + p.cn + ' cannons' };
   }
   if (name === 'trade_buy') {
     if (!np) return { ok: false, msg: 'No port nearby' };
@@ -88,6 +105,18 @@ export function executeCommand(
     return { ok: true, msg: np.port.name + ' is now friendly' };
   }
   if (name === 'attack_port') { return resolvePortAttack(gs, np); }
+  if (name === 'buy_legend') {
+    if (!np) return { ok: false, msg: 'No port nearby' };
+    const msg = buyDrinksForTown(gs, np.port);
+    addLog(msg, msg.includes('Not enough') ? 'r' : 'g');
+    return { ok: !msg.includes('Not enough'), msg };
+  }
+  if (name === 'demand_tribute') {
+    if (!np) return { ok: false, msg: 'No port nearby' };
+    const msg = demandTribute(gs, np.port);
+    addLog(msg, msg.includes('not yet') || msg.includes('not willing') ? 'r' : 'o');
+    return { ok: !msg.includes('not yet') && !msg.includes('not willing'), msg };
+  }
   if (name === 'sell_plunder') {
     const msg = sellPlunder(gs, np?.port ?? null);
     addLog(msg, msg.includes('No plunder') ? 'r' : 'g');

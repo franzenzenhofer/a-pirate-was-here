@@ -1,84 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { createReloadMeter, selectCombatTarget } from './combat-hud';
+import { createHullMeter, createReloadMeter, getCombatHudState, selectCombatTarget } from './combat-hud';
 import type { EnemyShip, PlayerShip } from '../core/types';
 import { asShipId } from '../core/types';
+import type { GameState } from '../sim/state/game-state';
+import { createTestEnemy, createTestPlayer, createTestSettings, createTestState } from '../test/fixtures';
 
 function createPlayer(overrides: Partial<PlayerShip> = {}): PlayerShip {
-  return {
-    id: asShipId(1),
-    x: 10,
-    y: 10,
-    angle: 0,
-    speed: 0,
-    targetX: null,
-    targetY: null,
-    hp: 14,
-    maxHp: 14,
-    cn: 8,
-    rl: 5500,
-    rng: 5.5,
-    acc: 0.6,
-    bspd: 2.6,
-    col: '#44aaff',
-    tk: 'BRIGANTINE',
-    reloadT: 0,
-    disabled: false,
-    sunk: false,
-    captured: false,
-    wakePoints: [],
-    turnRate: 1,
-    nat: 'PIRATE',
-    gold: 500,
-    crew: 80,
-    fame: 0,
-    kills: 0,
-    day: 1,
-    dayT: 0,
-    fleet: [],
-    cargo: [],
-    upgrades: { hull: 0, sails: 0, range: 0 },
-    ...overrides,
-  };
+  return createTestPlayer({ id: asShipId(1), x: 10, y: 10, ...overrides });
 }
 
 function createEnemy(overrides: Partial<EnemyShip> = {}): EnemyShip {
-  return {
-    id: asShipId(2),
-    x: 13,
-    y: 10,
-    angle: 0,
-    speed: 0,
-    targetX: null,
-    targetY: null,
-    hp: 10,
-    maxHp: 10,
-    cn: 4,
-    rl: 4500,
-    rng: 4.5,
-    acc: 0.55,
-    bspd: 3,
-    col: '#88ffaa',
-    tk: 'SLOOP',
-    reloadT: 1200,
-    disabled: false,
-    sunk: false,
-    captured: false,
-    wakePoints: [],
-    turnRate: 1,
-    nat: 'SPAIN',
-    role: 'MERCHANT',
-    tier: 'I',
-    ti: 0,
-    beh: { aggro: 0, flee: 0.3, wander: true, portAttack: false },
-    state: 'WANDER',
-    stTimer: 0,
-    changeT: 0,
-    loot: 100,
-    xp: 1,
-    homePort: null,
-    attackTarget: null,
-    ...overrides,
-  };
+  return createTestEnemy({ id: asShipId(2), x: 13, y: 10, maxHp: 10, hp: 10, reloadT: 1200, turnRate: 1, ...overrides });
 }
 
 describe('combat-hud', () => {
@@ -115,4 +47,30 @@ describe('combat-hud', () => {
       remainingMs: 2750,
     });
   });
+
+  it('rounds hull labels to clean integers', () => {
+    expect(createHullMeter(48.25, 60)).toEqual({
+      label: '48/60',
+      progress: 48.25 / 60,
+    });
+  });
+
+  it('hides the combat hud after defeat', () => {
+    const player = createPlayer({ hp: 0, name: 'EMBER CUTLASS' });
+    const enemy = createEnemy({ name: 'ROYAL BANNER' });
+    const gs = createGameState(player, [enemy], true);
+
+    expect(getCombatHudState(gs)).toBeNull();
+  });
 });
+
+function createGameState(player: PlayerShip, enemies: EnemyShip[], gameOver = false): GameState {
+  return createTestState({
+    seed: 1,
+    world: { tiles: new Uint8Array(4), variation: new Uint8Array(4), heightmap: new Float32Array(4) },
+    player,
+    enemies,
+    gameOver,
+    settings: createTestSettings({ minimapMode: 'hidden', preferredSeed: 1 }),
+  });
+}

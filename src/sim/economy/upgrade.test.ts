@@ -2,19 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { getUpgradeOptions } from './upgrade';
 import { asShipId } from '../../core/types';
 import type { PlayerShip } from '../../core/types';
+import { createTestPlayer } from '../../test/fixtures';
 
 function mkPlayer(overrides: Partial<PlayerShip> = {}): PlayerShip {
-  return {
-    id: asShipId(0), x: 0, y: 0, angle: 0, speed: 0,
-    targetX: null, targetY: null,
-    hp: 14, maxHp: 14, cn: 8, rl: 5500, rng: 5.5, acc: 0.6,
-    bspd: 1.1, col: '#44aaff', tk: 'BRIGANTINE',
-    reloadT: 0, disabled: false, sunk: false, captured: false,
-    wakePoints: [], turnRate: 1.0, nat: 'PIRATE',
-    gold: 5000, crew: 80, fame: 0, kills: 0, day: 1, dayT: 0, fleet: [], cargo: [],
-    upgrades: { hull: 0, sails: 0, range: 0 },
-    ...overrides,
-  };
+  return createTestPlayer({ id: asShipId(0), gold: 5000, bspd: 1.1, ...overrides });
 }
 
 describe('getUpgradeOptions', () => {

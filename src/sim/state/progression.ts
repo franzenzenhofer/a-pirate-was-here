@@ -3,10 +3,11 @@ import type { GameState } from './game-state';
 import { ERA_FAME, ERA_NAMES, SPAWN_INTERVAL, TREASURE_RESPAWN, PORT_WAR_CHECK } from '../../config/world';
 import { TIERS } from '../../config/ports';
 import { NATION_FLAGS } from '../../config/ports';
-import { spawnEdgeEnemy, spawnTreasures, createEnemy } from './spawn';
+import { spawnEdgeEnemyWithRng, spawnTreasuresWithSeed, createEnemy } from './spawn';
 import { isSail } from '../world/gen';
-import { addLog } from '../../renderer/canvas/log';
 import { updateObjectives } from './objectives';
+import { emitEvent } from './events';
+import { nextRandom } from './random';
 
 export interface PortRaidAssessment {
   winChance: number;
@@ -34,14 +35,12 @@ function updateEra(gs: GameState): void {
   const newEra = eraForFame(gs.player.fame);
   if (newEra > gs.era) {
     gs.era = newEra;
-    const el = document.getElementById('era');
-    const txt = document.getElementById('eraTxt');
-    if (el && txt) {
-      txt.textContent = '⚓ ' + (ERA_NAMES[Math.min(gs.era, 4)] ?? '') + ' ⚓';
-      el.style.display = 'block';
-      addLog('🌊 ' + (ERA_NAMES[Math.min(gs.era, 4)] ?? ''), 'o');
-      setTimeout(() => { el.style.display = 'none'; }, 3000);
-    }
+    emitEvent(gs, {
+      kind: 'era_up',
+      msg: '⚓ ' + (ERA_NAMES[Math.min(gs.era, 4)] ?? '') + ' ⚓',
+      tone: 'o',
+      duration: 3000,
+    });
   }
 }
 
@@ -52,14 +51,14 @@ function updateSpawns(gs: GameState, dt: number): void {
     gs.spawnTimer = 0;
     const count = gs.enemies.filter(e => !e.sunk && !e.captured).length;
     if (count < 80 + gs.era * 10) {
-      const en = spawnEdgeEnemy(gs.world.tiles, gs.era);
+      const en = spawnEdgeEnemyWithRng(gs.world.tiles, gs.era, undefined, () => nextRandom(gs));
       if (en) gs.enemies.push(en);
-      if (gs.era >= 2 && Math.random() < 0.5) {
-        const en2 = spawnEdgeEnemy(gs.world.tiles, gs.era);
+      if (gs.era >= 2 && nextRandom(gs) < 0.5) {
+        const en2 = spawnEdgeEnemyWithRng(gs.world.tiles, gs.era, undefined, () => nextRandom(gs));
         if (en2) gs.enemies.push(en2);
       }
-      if (gs.era >= 3 && Math.random() < 0.4) {
-        const en3 = spawnEdgeEnemy(gs.world.tiles, gs.era, Math.min(gs.era, 4));
+      if (gs.era >= 3 && nextRandom(gs) < 0.4) {
+        const en3 = spawnEdgeEnemyWithRng(gs.world.tiles, gs.era, Math.min(gs.era, 4), () => nextRandom(gs));
         if (en3) gs.enemies.push(en3);
       }
     }
@@ -72,9 +71,9 @@ function updateTreasureRespawn(gs: GameState, dt: number): void {
     gs.treasureTimer = 0;
     const unlootedCount = gs.treasures.filter(t => !t.looted).length;
     if (unlootedCount < 20) {
-      const newT = spawnTreasures(gs.world.tiles, 8 + gs.era * 2, gs.treasures);
+      const newT = spawnTreasuresWithSeed(gs.world.tiles, 8 + gs.era * 2, gs.treasures, gs.seed + gs.player.day + gs.treasures.length);
       gs.treasures.push(...newT);
-      addLog('💰 New treasures spotted!', 'b');
+      emitEvent(gs, { kind: 'log', msg: '💰 New treasures spotted!', tone: 'b' });
     }
   }
 }
@@ -83,22 +82,22 @@ function updatePortWars(gs: GameState, dt: number): void {
   gs.portWarTimer += dt;
   if (gs.portWarTimer < PORT_WAR_CHECK) return;
   gs.portWarTimer = 0;
-  if (Math.random() > 0.4) return;
+  if (nextRandom(gs) > 0.4) return;
 
-  const attPort = gs.ports[~~(Math.random() * gs.ports.length)];
-  const defPort = gs.ports[~~(Math.random() * gs.ports.length)];
+  const attPort = gs.ports[Math.floor(nextRandom(gs) * gs.ports.length)];
+  const defPort = gs.ports[Math.floor(nextRandom(gs) * gs.ports.length)];
   if (!attPort || !defPort || attPort === defPort || attPort.nat === defPort.nat) return;
 
   for (let a = 0; a < 20; a++) {
-    const sx = attPort.x + ~~((Math.random() - 0.5) * 6);
-    const sy = attPort.y + ~~((Math.random() - 0.5) * 6);
+    const sx = attPort.x + Math.floor((nextRandom(gs) - 0.5) * 6);
+    const sy = attPort.y + Math.floor((nextRandom(gs) - 0.5) * 6);
     if (isSail(gs.world.tiles, sx, sy)) {
       const tier = Math.min(1 + gs.era, 4);
-      const warship = createEnemy(sx + 0.5, sy + 0.5, 'WARSHIP', TIERS[tier] ?? 'MEDIUM', attPort.nat, gs.world.tiles);
+      const warship = createEnemy(sx + 0.5, sy + 0.5, 'WARSHIP', TIERS[tier] ?? 'MEDIUM', attPort.nat, gs.world.tiles, undefined, () => nextRandom(gs));
       warship.attackTarget = defPort;
       warship.state = 'PORT_ATTACK';
       gs.enemies.push(warship);
-      addLog((NATION_FLAGS[attPort.nat] ?? '') + ' fleet sails for ' + defPort.name + '!', 'o');
+      emitEvent(gs, { kind: 'log', msg: (NATION_FLAGS[attPort.nat] ?? '') + ' fleet sails for ' + defPort.name + '!', tone: 'o' });
       break;
     }
   }
@@ -120,10 +119,11 @@ export function portUnderAttack(
   attackerHp: number,
   attackerMaxHp: number,
   attackerNat: string,
+  roll: number = 0.5,
 ): { success: boolean; msg: string } {
   const raid = assessPortRaid(port, attackerCn, attackerHp, attackerMaxHp);
 
-  if (Math.random() < raid.winChance) {
+  if (roll < raid.winChance) {
     port.nat = attackerNat;
     port.rel = attackerNat === 'PIRATE' ? 'neutral' : 'enemy';
     port.garrison = ~~(port.garrison * 0.35);

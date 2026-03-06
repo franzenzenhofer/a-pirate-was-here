@@ -8,7 +8,7 @@ import { isSail } from '../world/gen';
  * IMPROVED: faster turn response, smoother acceleration, better obstacle avoidance.
  */
 export function moveShip(
-  ship: { x: number; y: number; angle: number; speed: number },
+  ship: { x: number; y: number; angle: number; speed: number; hp?: number; impactT?: number },
   targetX: number,
   targetY: number,
   dt: number,
@@ -54,6 +54,7 @@ export function moveShip(
         return false;
       }
     }
+    if (triggerDrift(ship, lookDist, tiles)) return true;
     ship.angle += 0.4;
     ship.speed *= 0.3;
     return false;
@@ -68,7 +69,30 @@ export function moveShip(
     return true;
   }
 
+  if (triggerDrift(ship, lookDist, tiles)) return true;
   ship.speed *= 0.2;
   ship.angle += 0.35;
+  return false;
+}
+
+function triggerDrift(
+  ship: { x: number; y: number; angle: number; speed: number; hp?: number; impactT?: number },
+  lookDist: number,
+  tiles: Uint8Array,
+): boolean {
+  if (ship.speed < 0.9 || (ship.impactT ?? 0) > 0) return false;
+  for (const offset of [Math.PI * 0.7, -Math.PI * 0.7]) {
+    const nextAngle = ship.angle + offset;
+    const tx = ship.x + Math.cos(nextAngle) * lookDist;
+    const ty = ship.y + Math.sin(nextAngle) * lookDist;
+    if (!isSail(tiles, ~~tx, ~~ty)) continue;
+    ship.angle = nextAngle;
+    ship.speed *= 0.6;
+    ship.impactT = 900;
+    if (typeof ship.hp === 'number') ship.hp = Math.max(0, ship.hp - 1);
+    ship.x += Math.cos(ship.angle) * Math.max(0.18, ship.speed * 0.35);
+    ship.y += Math.sin(ship.angle) * Math.max(0.18, ship.speed * 0.35);
+    return true;
+  }
   return false;
 }

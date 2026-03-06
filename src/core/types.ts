@@ -54,18 +54,26 @@ export interface Ship {
 
 export interface PlayerShip extends Ship {
   gold: number;
+  unsharedGold: number;
   crew: number;
   fame: number;
   kills: number;
   day: number;
   dayT: number;
+  feverT: number;
+  hypedT: number;
+  deafenedT: number;
+  mutinyGold: number;
+  ramBonus: number;
   fleet: FleetShip[];
   cargo: CargoItem[];
   upgrades: ShipUpgradeLevels;
 }
 
 export interface FleetShip {
+  name?: string;
   tk: string;
+  role?: 'escort' | 'cargo' | 'raider';
 }
 
 export interface CargoItem {
@@ -84,6 +92,12 @@ export interface EnemyShip extends Ship {
   changeT: number;
   loot: number;
   xp: number;
+  shellBroken?: boolean;
+  stunnedT?: number;
+  isHunter?: boolean;
+  isRival?: boolean;
+  intimidated?: boolean;
+  cargoDropDone?: boolean;
   homePort: Port | null;
   attackTarget: Port | null;
 }
@@ -122,6 +136,7 @@ export interface Cannonball {
   trail: Vec2[];
   fromX: number;
   fromY: number;
+  kind?: 'normal' | 'cursed';
 }
 
 export interface Particle {
@@ -140,4 +155,8 @@ export interface Treasure {
   y: number;
   gold: number;
   looted: boolean;
+  hidden?: boolean;
+  revealed?: boolean;
+  mapId?: string;
+  fakeIsland?: boolean;
 }

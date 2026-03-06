@@ -1,6 +1,7 @@
 import type { GameState } from '../sim/state/game-state';
 import { getTradeInfo } from '../sim/economy/trade';
 import { getUpgradeOptions } from '../sim/economy/upgrade';
+import { fleetSummary } from '../sim/state/fleet';
 
 export const PORT_RANGE = 4;
 export const ENEMY_RANGE = 3;
@@ -67,9 +68,11 @@ export function getAvailableActions(gs: GameState): Record<string, unknown> {
   return {
     canSail: p.hp > 0, paused: gs.paused,
     player: { hp: p.hp, maxHp: p.maxHp, gold: p.gold, crew: p.crew, ship: p.tk,
+      fleet: fleetSummary(p),
+      feverT: p.feverT, hypedT: p.hypedT, unsharedGold: p.unsharedGold,
       pos: { x: ~~(p.x * 10) / 10, y: ~~(p.y * 10) / 10 } },
     currentTarget: p.targetX !== null ? { x: p.targetX, y: p.targetY } : null,
     nearbyPorts: portActions, disabledEnemies,
-    globalActions: ['sail', 'stop', 'pause', 'resume', 'heal', 'gold', 'teleport'],
+    globalActions: ['sail', 'stop', 'pause', 'resume', 'heal', 'gold', 'teleport', 'share_loot', 'break_fog'],
   };
 }

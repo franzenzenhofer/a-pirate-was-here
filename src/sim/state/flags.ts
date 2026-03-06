@@ -1,4 +1,5 @@
 import type { PlayerShip, Port } from '../../core/types';
+import { nationStyle } from '../../core/nation-style';
 
 export const FLAG_COMMISSION_FAME = 90;
 
@@ -20,5 +21,5 @@ export function acceptFlagCommission(player: PlayerShip, port: Port): string {
   if (!offer) return `${port.name} has no flag contract for you.`;
   player.flag = offer.flag;
   player.gold += offer.reward;
-  return `${port.name} pays ${offer.reward}g to fly ${offer.flag} colors.`;
+  return `${port.name} pays ${offer.reward}g to fly ${nationStyle(offer.flag).sailingLabel.toLowerCase()}.`;
 }

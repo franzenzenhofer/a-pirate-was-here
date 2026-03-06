@@ -4,7 +4,7 @@ import type { GameState } from '../sim/state/game-state';
 import type { Camera } from '../renderer/camera';
 import { drawMap } from '../renderer/canvas/map';
 import { drawShip, drawWake, drawHealthBar } from '../renderer/canvas/ships';
-import { drawCannonballs, drawParticles, drawTreasures, drawNavTarget } from '../renderer/canvas/effects';
+import { drawCannonballs, drawFogZones, drawParticles, drawPickups, drawTreasureMapTarget, drawTreasures, drawNavTarget } from '../renderer/canvas/effects';
 import { drawEnemyLabels, drawPortLabels } from '../renderer/canvas/labels';
 
 export function renderGame(
@@ -18,7 +18,10 @@ export function renderGame(
   ctx.fillRect(0, 0, screenW, screenH);
 
   drawMap(ctx, cam, gs.world.tiles, gs.world.variation);
+  drawFogZones(ctx, gs.fogZones, cam);
   drawTreasures(ctx, gs.treasures, cam);
+  drawTreasureMapTarget(ctx, gs.treasures, gs.activeTreasureMapId, cam);
+  drawPickups(ctx, gs.pickups, cam);
 
   // Wakes — only draw for on-screen enemies
   const wakeMargin = 3;
@@ -38,7 +41,7 @@ export function renderGame(
     const esy = (en.y - cam.y) * TILE_PX;
     if (esx < -50 || esx > screenW + 50 || esy < -50 || esy > screenH + 50) continue;
     if (en.hp < en.maxHp) drawHealthBar(ctx, esx, esy, en.hp, en.maxHp);
-    drawShip(ctx, esx, esy, en.angle, en.col, en.tk, 0.9, en.disabled);
+    drawShip(ctx, esx, esy, en.angle, en.col, en.tk, 0.9, en.disabled, en.flag ?? en.nat, en.hp / Math.max(1, en.maxHp));
   }
   drawEnemyLabels(ctx, gs.enemies, cam);
 
@@ -50,7 +53,7 @@ export function renderGame(
   ctx.fillStyle = '#ffffaa';
   ctx.fillRect(psx - 18, psy - 18, 36, 36);
   ctx.globalAlpha = 1;
-  drawShip(ctx, psx, psy, player.angle, SHIP_TYPES[player.tk]?.col ?? '#44aaff', player.tk, 1.05, false);
+  drawShip(ctx, psx, psy, player.angle, SHIP_TYPES[player.tk]?.col ?? '#44aaff', player.tk, 1.05, false, player.flag ?? player.nat, player.hp / Math.max(1, player.maxHp));
 
   // Nav target
   if (player.targetX !== null && player.targetY !== null) {

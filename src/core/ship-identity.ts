@@ -1,5 +1,5 @@
-import { NATION_FLAGS } from '../config/ports';
 import type { Ship } from './types';
+import { nationStyle, normalizeNationKey } from './nation-style';
 
 const NAME_PREFIXES = [
   'BLACK', 'IRON', 'SEA', 'STORM', 'GOLDEN', 'NIGHT',
@@ -22,10 +22,17 @@ export function displayShipName(ship: Pick<Ship, 'name' | 'tk'>): string {
 }
 
 export function displayShipFlag(ship: Pick<Ship, 'flag' | 'nat'>): string {
-  return NATION_FLAGS[ship.flag ?? ship.nat] ?? '🏴';
+  return nationStyle(sailingNation(ship)).code;
 }
 
 export function displaySailingFlag(ship: Pick<Ship, 'flag' | 'nat'>): string {
-  const flag = ship.flag ?? ship.nat;
-  return `${displayShipFlag(ship)} ${flag.toUpperCase()} COLORS`;
+  return nationStyle(sailingNation(ship)).sailingLabel;
+}
+
+export function sailingNation(ship: Pick<Ship, 'flag' | 'nat'>): string {
+  return normalizeNationKey(ship.flag ?? ship.nat);
+}
+
+export function shipNationStyle(ship: Pick<Ship, 'flag' | 'nat'>) {
+  return nationStyle(sailingNation(ship));
 }

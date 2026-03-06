@@ -28,35 +28,42 @@ export function openTradeMenu(port: Port, player: PlayerShip, log: LogFn, onClos
   const render = (): void => {
     body.innerHTML = '';
     const info = getTradeInfo(player, port);
+    const used = player.cargo.reduce((sum, item) => sum + item.qty, 0);
+    const free = Math.max(0, cargoCapacity(player) - used);
     for (const item of info) {
       const row = document.createElement('div');
-      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;padding:6px 0;border-bottom:1px solid #223';
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px;padding:8px 0;border-bottom:1px solid #223';
       const label = document.createElement('span');
       label.style.cssText = `color:${item.color};font-size:${MENU_FONT}px;font-family:inherit;line-height:1.5`;
-      const profit = item.qty > 0 ? ` ${item.profitPerUnit >= 0 ? '+' : ''}${item.profitPerUnit}g` : '';
-      label.textContent = `${item.name} ${item.tradePrice}g${profit}${item.qty > 0 ? ' (×' + item.qty + ')' : ''}`;
+      const buyDelta = `BUY 5: -${item.tradePrice * 5}g`;
+      const sellDelta = item.qty > 0
+        ? `SELL: +${item.tradePrice * item.qty}g (${item.profitPerUnit >= 0 ? '+' : ''}${item.profitPerUnit}g/unit)`
+        : `SELL: none aboard`;
+      label.textContent =
+        `${item.name} ${item.tradePrice}g${item.qty > 0 ? ' · HOLD ×' + item.qty : ''}\n${buyDelta}\n${sellDelta}`;
+      label.style.whiteSpace = 'pre-line';
+      if (item.qty > 0 && item.profitPerUnit < 0) label.style.color = '#ff8888';
       row.appendChild(label);
       const btns = document.createElement('span');
       if (item.qty > 0) {
         const sell = document.createElement('button');
-        sell.className = 'mb g';
+        sell.className = 'mb ' + (item.profitPerUnit >= 0 ? 'g' : 'r');
         sell.style.cssText = `width:auto;display:inline;padding:8px 12px;margin:0 2px;font-size:${MENU_BUTTON_FONT}px`;
-        sell.textContent = 'SELL';
+        sell.textContent = item.profitPerUnit >= 0 ? 'SELL +' : 'SELL LOSS';
         sell.onclick = () => { const msg = sellGoods(player, port, item.name); log(msg, tradeLogType(msg)); render(); };
         btns.appendChild(sell);
       }
       const buy = document.createElement('button');
-      buy.className = 'mb y';
+      buy.className = 'mb ' + (free >= 5 ? 'y' : 'gr');
       buy.style.cssText = `width:auto;display:inline;padding:8px 12px;margin:0 2px;font-size:${MENU_BUTTON_FONT}px`;
-      buy.textContent = 'BUY';
+      buy.textContent = free >= 5 ? 'BUY 5' : 'HOLD FULL';
       buy.onclick = () => { const msg = buyGoods(player, port, item.name, 5); log(msg, tradeLogType(msg)); render(); };
       btns.appendChild(buy);
       row.appendChild(btns); body.appendChild(row);
     }
     const footer = document.createElement('div');
     footer.style.cssText = `color:#f0c040;font-size:${MENU_FONT}px;margin-top:14px;text-align:center`;
-    const used = player.cargo.reduce((sum, item) => sum + item.qty, 0);
-    footer.textContent = `💰 ${player.gold} GOLD · HOLD ${used}/${cargoCapacity(player)}`;
+    footer.textContent = `💰 ${player.gold} GOLD · HOLD ${used}/${cargoCapacity(player)} · FREE ${free}`;
     body.appendChild(footer);
   };
   render();

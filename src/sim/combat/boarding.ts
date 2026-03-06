@@ -1,4 +1,5 @@
 import type { PlayerShip, EnemyShip } from '../../core/types';
+import { fleetBoardingBonus } from '../state/fleet';
 
 export interface BoardingResult {
   success: boolean;
@@ -15,19 +16,20 @@ export interface BoardingResult {
 export function resolveBoarding(
   player: PlayerShip,
   enemy: EnemyShip,
+  randomValue: () => number = Math.random,
 ): BoardingResult {
   // Player strength: crew count * (hp ratio) * random factor
-  const playerStr = player.crew * (player.hp / player.maxHp) * (0.7 + Math.random() * 0.6);
+  const playerStr = (player.crew + fleetBoardingBonus(player)) * (player.hp / player.maxHp) * (0.7 + randomValue() * 0.6);
 
   // Enemy strength: estimated crew (based on ship size)
   const enemyCrew = estimateCrew(enemy.tk);
-  const enemyStr = enemyCrew * (enemy.hp / enemy.maxHp) * (0.5 + Math.random() * 0.5);
+  const enemyStr = enemyCrew * (enemy.hp / enemy.maxHp) * (0.5 + randomValue() * 0.5);
 
   const ratio = playerStr / (playerStr + enemyStr + 1);
   const success = ratio > 0.45;
 
   if (success) {
-    const crewLost = Math.max(2, ~~(enemyCrew * 0.3 * Math.random()));
+    const crewLost = Math.max(2, ~~(enemyCrew * 0.3 * randomValue()));
     const lootBonus = ~~(enemy.loot * 1.5); // 50% more loot from boarding
     return {
       success: true,
@@ -38,7 +40,7 @@ export function resolveBoarding(
     };
   }
 
-  const crewLost = Math.max(5, ~~(player.crew * 0.15 * Math.random()));
+  const crewLost = Math.max(5, ~~(player.crew * 0.15 * randomValue()));
   return {
     success: false,
     playerCrewLost: crewLost,

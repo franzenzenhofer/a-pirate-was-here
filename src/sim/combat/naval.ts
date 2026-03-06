@@ -15,6 +15,7 @@ export function fireBroadside(
   dmg: number,
   range: number,
   cannonCount: number,
+  randomValue: () => number = Math.random,
 ): Cannonball[] {
   const toTarget = Math.atan2(targetY - fy, targetX - fx);
   const relAngle = toTarget - shipAngle;
@@ -26,7 +27,7 @@ export function fireBroadside(
   const balls: Cannonball[] = [];
 
   for (let i = 0; i < shots; i++) {
-    const sa = broadsideAngle + (i - (shots - 1) / 2) * spread + (Math.random() - 0.5) * 0.08;
+    const sa = broadsideAngle + (i - (shots - 1) / 2) * spread + (randomValue() - 0.5) * 0.08;
     balls.push({
       x: fx + Math.cos(broadsideAngle) * 0.6,
       y: fy + Math.sin(broadsideAngle) * 0.6,

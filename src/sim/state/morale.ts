@@ -16,6 +16,7 @@ export function updateMorale(
   morale: MoraleState,
   player: PlayerShip,
   dt: number,
+  randomValue: () => number = Math.random,
 ): string | null {
   // Gold makes crew happy
   if (player.gold > 1000) morale.value = Math.min(100, morale.value + dt * 0.0001);
@@ -36,7 +37,7 @@ export function updateMorale(
   morale.mutinyRisk = morale.value < 20 ? (20 - morale.value) / 20 * 0.3 : 0;
 
   // Check for mutiny event (very rare)
-  if (morale.mutinyRisk > 0.1 && Math.random() < morale.mutinyRisk * dt * 0.000001) {
+  if (morale.mutinyRisk > 0.1 && randomValue() < morale.mutinyRisk * dt * 0.000001) {
     const deserters = Math.max(3, ~~(player.crew * 0.1));
     player.crew = Math.max(1, player.crew - deserters);
     const stolenGold = Math.min(player.gold, ~~(player.gold * 0.1));

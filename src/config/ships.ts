@@ -22,6 +22,8 @@ export const SHIP_TYPES: Record<string, ShipStats> = {
   GALLEON:     { spd: 1.5,  hp: 36, cn: 28, rl: 9000,  rng: 7.5, acc: 0.68, col: '#ff8822', loot: 1400, xp: 9,  turn: 0.65 },
   MAN_O_WAR:   { spd: 1.0,  hp: 60, cn: 44, rl: 12000, rng: 9.0, acc: 0.72, col: '#ff2222', loot: 2500, xp: 22, turn: 0.5 },
   DREAD_GHOST: { spd: 2.1,  hp: 26, cn: 18, rl: 6500,  rng: 7.2, acc: 0.74, col: '#bbf8ff', loot: 1800, xp: 14, turn: 0.9 },
+  MEGALODON:   { spd: 4.2,  hp: 38, cn: 0,  rl: 0,     rng: 0,   acc: 1.0,  col: '#9aa7b4', loot: 0,    xp: 16, turn: 1.6 },
+  CRAB_LEVIATHAN: { spd: 1.8, hp: 52, cn: 0, rl: 0,    rng: 0,   acc: 1.0,  col: '#b48a52', loot: 2200, xp: 20, turn: 0.7 },
 };
 
 export const SHIP_KEYS = ['CUTTER', 'SLOOP', 'BRIGANTINE', 'FRIGATE', 'GALLEON', 'MAN_O_WAR'];
