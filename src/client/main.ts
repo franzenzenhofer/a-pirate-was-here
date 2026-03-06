@@ -10,29 +10,31 @@ import { createCamera, resize as resizeCam } from '../renderer/camera';
 import { updateHUD } from '../renderer/canvas/hud';
 import { buildMinimapBase, drawMinimap } from '../renderer/canvas/minimap';
 import { drawCompass } from '../renderer/canvas/compass';
-import { openPortMenu, openCaptureMenu, openTradeMenu } from '../renderer/canvas/menus';
+import { openPortMenu, openCaptureMenu, openTradeMenu, openUpgradeMenu } from '../renderer/canvas/menus';
 import { addLog } from '../renderer/canvas/log';
 import { portUnderAttack } from '../sim/state/progression';
 import { createExplosion } from '../sim/combat/damage';
+import { createMorale, updateMorale } from '../sim/state/morale';
 import { createInputState, setupInputListeners } from '../input/touch';
+import { createKeyState, setupKeyboardListeners, applyKeyboardNav } from '../input/keyboard';
 import { startLoop } from './loop';
 import { updateGame } from './update';
 import { renderGame } from './render';
 
-// Canvas setup
+// Canvas
 const canvas = document.getElementById('c') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
 ctx.imageSmoothingEnabled = false;
 let WP = window.innerWidth, HP = window.innerHeight;
 canvas.width = WP; canvas.height = HP;
 
-// World generation
+// World
 const world = generateWorld(DEFAULT_SEED);
 const ports = placePorts(world.tiles, DEFAULT_SEED);
 const enemies = spawnInitialEnemies(world.tiles, 55);
 const treasures = spawnTreasures(world.tiles, 35, []);
 
-// Player init
+// Player spawn — find open ocean near center
 const pST = SHIP_TYPES['BRIGANTINE']!;
 let spawnX = WORLD_W / 2, spawnY = WORLD_H / 2, bestDist = 99999;
 for (let y = 2; y < WORLD_H - 2; y++) {
@@ -57,9 +59,11 @@ const player = {
   cargo: [] as { good: string; qty: number; buyPrice: number }[],
 };
 
-// Game state
+// State
 const wind = createWind();
 const cam = createCamera(player.x, player.y, WP, HP);
+const morale = createMorale();
+
 const gs: GameState = {
   world, player, enemies, ports,
   cannonballs: [], particles: [], treasures, wind,
@@ -72,27 +76,29 @@ const mmCtx = (document.getElementById('minimap') as HTMLCanvasElement).getConte
 buildMinimapBase(mmCtx, world.tiles);
 const compCtx = (document.getElementById('compass') as HTMLCanvasElement).getContext('2d')!;
 
-// Window resize
+// Resize
 window.addEventListener('resize', () => {
   WP = window.innerWidth; HP = window.innerHeight;
-  canvas.width = WP; canvas.height = HP;
-  resizeCam(cam, WP, HP);
+  canvas.width = WP; canvas.height = HP; resizeCam(cam, WP, HP);
 });
 
-// Input — tap to navigate or interact
+// Touch input
 const input = createInputState();
 setupInputListeners(canvas, input, cam, (result) => {
-  if (gs.paused) return;
+  if (gs.paused || player.hp <= 0) return;
+  // Check ports
   for (const p of ports) {
     if (Math.hypot(p.x - result.wx, p.y - result.wy) < 3) {
       gs.paused = true;
       openPortMenu(p, player, addLog,
         () => { gs.paused = false; },
         (port) => { attackPort(port); gs.paused = false; },
-        (port) => { gs.paused = true; openTradeMenu(port, player, addLog, () => { gs.paused = false; }); });
+        (port) => { gs.paused = true; openTradeMenu(port, player, addLog, () => { gs.paused = false; }); },
+        () => { gs.paused = true; openUpgradeMenu(player, addLog, () => { gs.paused = false; }); });
       return;
     }
   }
+  // Check disabled enemies
   for (const en of enemies) {
     if (en.disabled && !en.sunk && Math.hypot(en.x - result.wx, en.y - result.wy) < 2) {
       gs.paused = true;
@@ -104,6 +110,10 @@ setupInputListeners(canvas, input, cam, (result) => {
   }
   player.targetX = result.wx; player.targetY = result.wy;
 });
+
+// Keyboard input
+const keys = createKeyState();
+setupKeyboardListeners(keys);
 
 function attackPort(p: typeof ports[number]): void {
   addLog('⚔️ ATTACKING ' + p.name + '!', 'r');
@@ -123,6 +133,12 @@ function attackPort(p: typeof ports[number]): void {
 
 // Game loop
 startLoop((dt) => {
+  // Keyboard navigation
+  applyKeyboardNav(keys, player, cam);
+  // Morale
+  const moraleMsg = updateMorale(morale, player, dt);
+  if (moraleMsg) addLog(moraleMsg, 'r');
+  // Game update + render
   updateGame(gs, cam, dt, () => {
     renderGame(ctx, gs, cam, WP, HP);
     updateHUD(player, gs.era, wind);
@@ -132,7 +148,7 @@ startLoop((dt) => {
 });
 
 addLog('⚓ PIRATES! THE CARIBBEAN', 'b');
-addLog('TAP TO SET SAIL', 'b');
+addLog('TAP or WASD to SET SAIL', 'b');
 addLog('BROADSIDE CANNONS AUTO-FIRE 🔫', 'g');
-setTimeout(() => addLog('TAP PORTS TO TRADE OR ATTACK', 'b'), 2500);
+setTimeout(() => addLog('TAP PORTS TO TRADE & UPGRADE', 'b'), 2500);
 setTimeout(() => addLog('💰 SEEK TREASURE ON BEACHES!', 'g'), 5000);

@@ -2,10 +2,13 @@ import type { EnemyShip, PlayerShip } from '../../core/types';
 import { angleTo } from '../../core/math';
 import { isSail } from '../world/gen';
 
+/** Vision range — AI only reacts to what it can "see" (fog of war) */
+const VISION_RANGE = 18;
+
 /**
  * AI Strategy — decides what the enemy should do each frame.
  * AI uses the SAME movement and combat as the player.
- * The only difference: AI sets targetX/targetY programmatically.
+ * FOG OF WAR: AI only acts on player within VISION_RANGE — no cheating.
  */
 export function updateAIState(
   en: EnemyShip,
@@ -16,20 +19,23 @@ export function updateAIState(
   if (en.sunk || en.captured || en.disabled) return;
 
   const dpP = Math.hypot(en.x - player.x, en.y - player.y);
+  const canSeePlayer = dpP < VISION_RANGE;
   const shouldFlee = en.hp / en.maxHp < en.beh.flee;
 
   en.stTimer += dt;
 
-  // State transitions
-  if (shouldFlee) {
+  // State transitions — only chase if AI can SEE the player
+  if (shouldFlee && canSeePlayer) {
     en.state = 'FLEE';
-  } else if (dpP < 12 && en.beh.aggro > 0 && Math.random() < en.beh.aggro * 0.002 * dt) {
+  } else if (shouldFlee && en.state === 'FLEE' && !canSeePlayer) {
+    en.state = 'WANDER'; // Lost sight, stop fleeing
+  } else if (canSeePlayer && dpP < 12 && en.beh.aggro > 0 && Math.random() < en.beh.aggro * 0.002 * dt) {
     en.state = 'CHASE';
     en.stTimer = 0;
   } else if (en.attackTarget) {
     en.state = 'PORT_ATTACK';
-  } else if (en.state === 'CHASE' && en.stTimer > 8000) {
-    en.state = 'WANDER';
+  } else if (en.state === 'CHASE' && (en.stTimer > 8000 || !canSeePlayer)) {
+    en.state = 'WANDER'; // Lost sight or chase timeout
   }
 
   // Wander: pick new random sea target periodically
@@ -80,11 +86,11 @@ export function getAINavTarget(
   return { navX, navY };
 }
 
-/** Check if enemy should fire at player */
+/** Check if enemy should fire at player — requires vision */
 export function shouldFireAtPlayer(en: EnemyShip, player: PlayerShip): boolean {
   if (en.state !== 'CHASE' || en.reloadT > 0) return false;
   const dpP = Math.hypot(en.x - player.x, en.y - player.y);
-  return dpP < en.rng;
+  return dpP < en.rng && dpP < VISION_RANGE;
 }
 
 /** Check if enemy should fire at another enemy */
@@ -99,7 +105,7 @@ export function shouldFireAtEnemy(en: EnemyShip, other: EnemyShip): boolean {
   if (!hostile) return false;
 
   const d2 = Math.hypot(en.x - other.x, en.y - other.y);
-  return d2 < en.rng * 0.8;
+  return d2 < en.rng * 0.8 && d2 < VISION_RANGE;
 }
 
 /** Check if enemy has reached port attack target */
