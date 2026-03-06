@@ -22,6 +22,7 @@ export interface Vec2 {
 
 export interface Ship {
   id: ShipId;
+  name?: string;
   x: number;
   y: number;
   angle: number;
@@ -44,6 +45,11 @@ export interface Ship {
   wakePoints: Vec2[];
   turnRate: number;
   nat: string;
+  flag?: string;
+  stuckT?: number;
+  lastSafeX?: number;
+  lastSafeY?: number;
+  impactT?: number;
 }
 
 export interface PlayerShip extends Ship {

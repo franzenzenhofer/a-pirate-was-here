@@ -1,6 +1,7 @@
 import type { PlayerShip, EnemyShip, Port } from '../../core/types';
 import { NATION_FLAGS } from '../../config/ports';
 import { resolveBoarding } from '../../sim/combat/boarding';
+import { assessPortRaid } from '../../sim/state/progression';
 import type { LogFn } from './log';
 
 function mkBtn(parent: HTMLElement, lbl: string, cls: string, fn: () => void): void {
@@ -22,6 +23,21 @@ export function openPortMenu(
   const body = document.getElementById('pbody')!;
   body.innerHTML = '';
   const close = () => { menu.style.display = 'none'; onClose(); };
+  const raid = assessPortRaid(p, player.cn, player.hp, player.maxHp);
+  const raidLabel =
+    `⚔️ RAID & LOOT — ${Math.round(raid.winChance * 100)}% WIN · ${raid.expectedGold}g NOW · ${raid.expectedPlunder}g BOOTY`;
+  const tryRaid = (): void => {
+    if (raid.winChance < 0.35) {
+      const proceed = window.confirm(
+        `${p.name} is a ${raid.rating.toLowerCase()} raid.\n` +
+        `Only ${Math.round(raid.winChance * 100)}% win chance.\n` +
+        `Likely counter-damage: ${raid.counterDamage} HP.\n\nAttack anyway?`,
+      );
+      if (!proceed) return;
+    }
+    close();
+    onAttack(p);
+  };
 
   if (p.rel === 'friendly') {
     const rc = ~~(player.maxHp * 18), ra = ~~(player.maxHp * 0.6);
@@ -40,7 +56,7 @@ export function openPortMenu(
     mkBtn(body, '📦 TRADE GOODS', 'b', () => { close(); onTrade(p); });
     mkBtn(body, '🛠️ UPGRADES', 'b', () => { close(); onUpgrade(p); });
     mkBtn(body, '💰 SELL PLUNDER', 'y', () => { onSellPlunder(p); close(); });
-    mkBtn(body, '⚔️ ATTACK PORT', 'r', () => { close(); onAttack(p); });
+    mkBtn(body, raidLabel, raid.winChance < 0.35 ? 'r' : 'y', tryRaid);
   } else if (p.rel === 'neutral') {
     mkBtn(body, '🤝 PAY TRIBUTE (200g → friendly)', 'y', () => {
       if (player.gold >= 200) { player.gold -= 200; p.rel = 'friendly'; log(p.name + ' now FRIENDLY!', 'g'); }
@@ -51,9 +67,9 @@ export function openPortMenu(
       else log('Not enough gold!', 'r'); close();
     });
     mkBtn(body, '📦 TRADE (higher prices)', 'b', () => { close(); onTrade(p); });
-    mkBtn(body, '⚔️ RAID & LOOT', 'r', () => { close(); onAttack(p); });
+    mkBtn(body, raidLabel, raid.winChance < 0.35 ? 'r' : 'y', tryRaid);
   } else {
-    mkBtn(body, `⚔️ ASSAULT! (${p.garrison} garrison)`, 'r', () => { close(); onAttack(p); });
+    mkBtn(body, raidLabel, raid.winChance < 0.35 ? 'r' : 'y', tryRaid);
     mkBtn(body, '💨 STAY CLEAR', 'gr', () => close());
   }
   menu.style.display = 'block';

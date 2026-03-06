@@ -65,3 +65,7 @@ export function loadFromStorage(gs: GameState): boolean {
   applySnapshot(gs, JSON.parse(raw) as SavedGame);
   return true;
 }
+
+export function clearStorage(): void {
+  localStorage.removeItem(SAVE_KEY);
+}

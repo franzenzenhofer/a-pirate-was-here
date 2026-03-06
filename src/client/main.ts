@@ -6,7 +6,7 @@ import { drawCompass } from '../renderer/canvas/compass';
 import { openPortMenu, openCaptureMenu } from '../renderer/canvas/menus';
 import { openTradeMenu, openUpgradeMenu } from '../renderer/canvas/port-trade-menus';
 import { addLog } from '../renderer/canvas/log';
-import { portUnderAttack } from '../sim/state/progression';
+import { assessPortRaid, portUnderAttack } from '../sim/state/progression';
 import { createExplosion } from '../sim/combat/damage';
 import { createMorale, updateMorale } from '../sim/state/morale';
 import { createInputState, setupInputListeners } from '../input/touch';
@@ -24,7 +24,7 @@ import { bindSessionUI, syncSessionUI } from './session-ui';
 import { addPlunder, sellPlunder } from '../sim/economy/plunder';
 import { increaseInfamy } from '../sim/state/reputation';
 import { resolveLegendaryVictory } from '../sim/state/objectives';
-import { loadFromStorage, saveToStorage } from './save-game';
+import { clearStorage, loadFromStorage, saveToStorage } from './save-game';
 import { createInitialGame } from './create-game';
 
 // Canvas
@@ -91,19 +91,20 @@ setupKeyboardListeners(keys);
 function attackPort(p: typeof ports[number]): void {
   addLog('⚔️ ATTACKING ' + p.name + '!', 'r');
   const defendingNation = p.nat;
+  const raid = assessPortRaid(p, player.cn, player.hp, player.maxHp);
   const result = portUnderAttack(p, player.cn, player.hp, player.maxHp, 'PIRATE');
   setTimeout(() => {
     if (result.success) {
-      const instantGold = ~~(p.wealth * 0.2);
+      const instantGold = raid.expectedGold;
       player.gold += instantGold; player.fame += 60; player.kills++;
-      addPlunder(gs, 'Port Booty', Math.max(120, ~~(p.wealth * 0.8)), p.name, 1);
+      addPlunder(gs, 'Port Booty', raid.expectedPlunder, p.name, 1);
       increaseInfamy(gs, 12, defendingNation);
       gs.particles.push(...createExplosion(p.x, p.y, '#ff4400', 20));
       addLog('🏆 ' + result.msg + ` +${instantGold}g now, cargo hold packed with booty.`, 'g');
     } else {
-      const dmg = 2 + ~~(Math.random() * 6);
+      const dmg = raid.counterDamage + ~~(Math.random() * 3);
       player.hp = Math.max(1, player.hp - dmg);
-      addLog('💀 REPELLED! -' + dmg + ' HP', 'r');
+      addLog(`💀 REPELLED! -${dmg} HP · Raid odds were ${Math.round(raid.winChance * 100)}%`, 'r');
     }
   }, 600);
 }
@@ -116,7 +117,13 @@ setLogHook((msg, type) => {
 });
 mountDebugAPI(gs, cam);
 startDebugPush(gs, cam);
-bindSessionUI(() => window.location.reload(), () => addLog(saveToStorage(gs), 'b'));
+bindSessionUI(
+  () => window.location.reload(),
+  () => addLog(saveToStorage(gs), 'b'),
+  () => { clearStorage(); window.location.reload(); },
+);
+window.addEventListener('pagehide', () => { saveToStorage(gs); });
+setInterval(() => { saveToStorage(gs); }, 12000);
 
 // Game loop — throttle secondary renders
 let frameN = 0;

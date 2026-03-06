@@ -4,6 +4,7 @@ import { ROLES, TIERS, BEHAVIOR } from '../../config/ports';
 import { WORLD_W, WORLD_H } from '../../config/world';
 import { mkRawRng } from '../../core/rng';
 import { asShipId } from '../../core/types';
+import { shipNameFromSeed } from '../../core/ship-identity';
 import { isSail } from '../world/gen';
 
 let nextId = 1000;
@@ -20,11 +21,14 @@ export function createEnemy(
   const tk = forcedType ?? shipTypeForRole(role, ti >= 0 ? ti : 0, rE());
   const s = SHIP_TYPES[tk];
   if (!s) throw new Error(`Unknown ship type: ${tk}`);
+  const shipId = asShipId(nextId++);
+  const chosenNat = nat ?? ['SPAIN', 'ENGLAND', 'FRANCE', 'DUTCH', 'PIRATE'][~~(rE() * 5)] ?? 'SPAIN';
 
   const beh = BEHAVIOR[role] ?? BEHAVIOR['MERCHANT']!;
 
   return {
-    id: asShipId(nextId++),
+    id: shipId,
+    name: shipNameFromSeed(Number(shipId) + ti * 11),
     x: ex, y: ey,
     angle: rE() * Math.PI * 2,
     speed: 0,
@@ -43,7 +47,12 @@ export function createEnemy(
     disabled: false, sunk: false, captured: false,
     wakePoints: [],
     turnRate: s.turn,
-    nat: nat ?? ['SPAIN', 'ENGLAND', 'FRANCE', 'DUTCH', 'PIRATE'][~~(rE() * 5)] ?? 'SPAIN',
+    nat: chosenNat,
+    flag: chosenNat,
+    stuckT: 0,
+    lastSafeX: ex,
+    lastSafeY: ey,
+    impactT: 0,
     homePort: null,
     attackTarget: null,
   };

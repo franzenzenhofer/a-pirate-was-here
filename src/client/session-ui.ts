@@ -2,7 +2,7 @@ import { getCombatHudState } from './combat-hud';
 import { latestArchive } from '../sim/state/archive';
 import type { GameState } from '../sim/state/game-state';
 
-export function bindSessionUI(onRestart: () => void, onSave: () => void): void {
+export function bindSessionUI(onRestart: () => void, onSave: () => void, onStartFresh: () => void): void {
   const restartBtn = document.getElementById('goRestart');
   if (restartBtn) restartBtn.onclick = onRestart;
 
@@ -23,8 +23,24 @@ export function bindSessionUI(onRestart: () => void, onSave: () => void): void {
     };
   }
 
-  const saveBtn = document.getElementById('saveBtn');
-  if (saveBtn) saveBtn.onclick = onSave;
+  const settingsBtn = document.getElementById('settingsBtn');
+  if (settingsBtn) {
+    settingsBtn.onclick = () => togglePanel('settingsPanel');
+  }
+
+  const saveNowBtn = document.getElementById('saveNowBtn');
+  if (saveNowBtn) saveNowBtn.onclick = onSave;
+
+  const startFreshBtn = document.getElementById('startFreshBtn');
+  if (startFreshBtn) startFreshBtn.onclick = onStartFresh;
+
+  const settingsClose = document.getElementById('settingsClose');
+  if (settingsClose) {
+    settingsClose.onclick = () => {
+      const panel = document.getElementById('settingsPanel');
+      if (panel) panel.style.display = 'none';
+    };
+  }
 }
 
 export function syncSessionUI(gs: GameState): void {
@@ -96,4 +112,10 @@ function renderCombatHud(gs: GameState): void {
   playerText.textContent = combat.player.label;
   enemyBar.style.width = `${combat.enemy.progress * 100}%`;
   enemyText.textContent = combat.enemy.label;
+}
+
+function togglePanel(id: string): void {
+  const panel = document.getElementById(id);
+  if (!panel) return;
+  panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
 }

@@ -8,6 +8,14 @@ import { isSail } from '../world/gen';
 import { addLog } from '../../renderer/canvas/log';
 import { updateObjectives } from './objectives';
 
+export interface PortRaidAssessment {
+  winChance: number;
+  expectedGold: number;
+  expectedPlunder: number;
+  counterDamage: number;
+  rating: 'FAVORABLE' | 'RISKY' | 'DESPERATE';
+}
+
 /** Update era progression, spawning, and port wars */
 export function updateProgression(gs: GameState, dt: number): void {
   updateEra(gs);
@@ -113,16 +121,37 @@ export function portUnderAttack(
   attackerMaxHp: number,
   attackerNat: string,
 ): { success: boolean; msg: string } {
-  const aPow = attackerCn * (attackerHp / attackerMaxHp);
-  const dPow = port.cannons + port.garrison * 0.6;
-  const roll = Math.random() * aPow / (aPow + dPow + 1);
+  const raid = assessPortRaid(port, attackerCn, attackerHp, attackerMaxHp);
 
-  if (roll > 0.38) {
+  if (Math.random() < raid.winChance) {
     port.nat = attackerNat;
     port.rel = attackerNat === 'PIRATE' ? 'neutral' : 'enemy';
-    port.garrison = ~~(port.garrison * 0.3);
-    port.wealth = ~~(port.wealth * 0.2);
+    port.garrison = ~~(port.garrison * 0.35);
+    port.wealth = Math.max(120, port.wealth - raid.expectedPlunder);
     return { success: true, msg: port.name + ' falls to ' + (NATION_FLAGS[attackerNat] ?? '') + '!' };
   }
-  return { success: false, msg: port.name + ' repelled attack!' };
+  return { success: false, msg: `${port.name} repelled the raid! (${raid.rating} odds)` };
+}
+
+export function assessPortRaid(
+  port: Port,
+  attackerCn: number,
+  attackerHp: number,
+  attackerMaxHp: number,
+): PortRaidAssessment {
+  const hullFactor = attackerMaxHp > 0 ? attackerHp / attackerMaxHp : 0;
+  const attackPower = attackerCn * (0.55 + hullFactor * 0.9);
+  const defensePower = port.cannons * 1.15 + port.garrison * 0.7 + port.wealth / 800;
+  const winChance = Math.max(0.08, Math.min(0.92, attackPower / (attackPower + defensePower + 1)));
+  const expectedGold = Math.max(70, Math.round(port.wealth * (0.08 + winChance * 0.18)));
+  const expectedPlunder = Math.max(120, Math.round(port.wealth * (0.28 + winChance * 0.34)));
+  const counterDamage = Math.max(2, Math.round((defensePower / Math.max(attackerCn, 1)) * 2.4));
+
+  return {
+    winChance,
+    expectedGold,
+    expectedPlunder,
+    counterDamage,
+    rating: winChance >= 0.65 ? 'FAVORABLE' : winChance >= 0.4 ? 'RISKY' : 'DESPERATE',
+  };
 }

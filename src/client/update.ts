@@ -11,9 +11,11 @@ import { updateProgression, portUnderAttack } from '../sim/state/progression';
 import { crewWagesPerDay } from '../config/economy';
 import { followTarget } from '../renderer/camera';
 import type { Camera } from '../renderer/camera';
-import { updateWind } from '../sim/nav/wind';
+import { updateWind, windModifier } from '../sim/nav/wind';
 import { addLog } from '../renderer/canvas/log';
 import { fleetDamageBonus } from '../sim/state/fleet';
+
+let windWarningCooldown = 0;
 
 export function updateGame(gs: GameState, cam: Camera, dt: number, renderFn: () => void): void {
   if (gs.paused || gs.gameOver) { renderFn(); return; }
@@ -29,6 +31,7 @@ export function updateGame(gs: GameState, cam: Camera, dt: number, renderFn: () 
 function updatePlayer(gs: GameState, cam: Camera, dt: number): void {
   const player = gs.player;
   if (player.hp <= 0) return;
+  windWarningCooldown = Math.max(0, windWarningCooldown - dt);
   player.reloadT = Math.max(0, player.reloadT - dt);
   player.dayT += dt;
   if (player.dayT > DAY_DURATION) {
@@ -43,6 +46,7 @@ function updatePlayer(gs: GameState, cam: Camera, dt: number): void {
     const st = SHIP_TYPES[player.tk];
     const moved = moveShip(player, player.targetX, player.targetY,
       dt * SPD_SCALE, st?.spd ?? 1.0, st?.turn ?? 1.0, gs.wind.angle, 1.0, gs.world.tiles);
+    maybeWarnAgainstWind(gs, st?.spd ?? 1.0);
     if (Math.hypot(player.targetX - player.x, player.targetY - player.y) < 0.3) {
       player.targetX = null; player.targetY = null; player.speed = 0;
     }
@@ -55,6 +59,15 @@ function updatePlayer(gs: GameState, cam: Camera, dt: number): void {
 
   autoFirePlayer(gs);
   pickupTreasures(gs);
+}
+
+function maybeWarnAgainstWind(gs: GameState, baseSpeed: number): void {
+  if (windWarningCooldown > 0) return;
+  const player = gs.player;
+  const windEffect = windModifier(player.angle, gs.wind.angle, 1.0);
+  if (windEffect > 0.58 || player.speed > baseSpeed * 0.72) return;
+  addLog('🌬 Slow going — you are sailing into the wind.', 'o');
+  windWarningCooldown = 6000;
 }
 
 function autoFirePlayer(gs: GameState): void {
