@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>⚓ PIRATES! Caribbean</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0e1a;font-family:'Press Start 2P',monospace}
+canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;position:absolute;top:0;left:0}
+#hud{position:fixed;top:0;left:0;right:0;z-index:30;pointer-events:none}
+#topbar{display:flex;justify-content:space-between;align-items:flex-start;padding:5px 8px;background:linear-gradient(#000e,#0008);border-bottom:1px solid #2244aa}
+.sc{color:#f0c040;font-size:6px;line-height:2.1;min-width:90px}
+.sc.r{text-align:right}
+#hpbar{display:flex;align-items:center;gap:3px;margin-top:2px}
+.hs{width:7px;height:7px;border:1px solid #446;background:#113}
+.hs.f{background:#22dd44;border-color:#44ff66}
+.hs.lo{background:#dd4422;border-color:#ff6644}
+#minimap{position:fixed;bottom:8px;right:8px;border:2px solid #334477;background:#000;z-index:30;pointer-events:none}
+#log{position:fixed;bottom:8px;left:8px;z-index:30;pointer-events:none;max-width:200px}
+.le{background:rgba(0,0,0,0.88);border-left:2px solid #f0c040;color:#f0c040;font-size:6px;padding:3px 6px;margin-bottom:2px;line-height:1.7}
+.le.r{border-color:#ff4444;color:#ff8888}
+.le.g{border-color:#44ff88;color:#88ffaa}
+.le.b{border-color:#44aaff;color:#88ccff}
+.le.o{border-color:#ffaa44;color:#ffcc88}
+#pmenu,#cmenu,#tmenu{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#060d1a;border:2px solid #5566aa;padding:16px 18px;z-index:40;min-width:240px;display:none;box-shadow:0 0 20px #0008;max-height:85vh;overflow-y:auto}
+#pmenu h3,#cmenu h3,#tmenu h3{color:#f0c040;font-size:8px;margin-bottom:12px;text-align:center;border-bottom:1px solid #334;padding-bottom:6px}
+.mb{display:block;width:100%;padding:8px 8px;font-family:inherit;font-size:6px;margin-bottom:5px;cursor:pointer;border:1px solid;background:transparent;text-align:left;line-height:1.6;pointer-events:all}
+.mb:active{opacity:0.7;transform:scale(0.97)}
+.mb.g{color:#44ff88;border-color:#44ff88}.mb.r{color:#ff5544;border-color:#ff5544}
+.mb.y{color:#f0c040;border-color:#f0c040}.mb.gr{color:#777;border-color:#444}
+.mb.b{color:#44aaff;border-color:#44aaff}
+.mc{color:#555;font-size:6px;cursor:pointer;pointer-events:all;text-align:right;margin-top:6px}
+#era{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:50;pointer-events:none;display:none;text-align:center}
+#era .etxt{font-size:11px;color:#ffcc44;text-shadow:0 0 12px #ff8800,0 0 24px #ff4400;padding:10px 18px;background:rgba(0,0,0,0.85);border:2px solid #ff8800}
+#navpulse{position:fixed;z-index:25;pointer-events:none;display:none;width:24px;height:24px;border:2px solid rgba(255,220,60,0.6);border-radius:50%;animation:pulse 0.6s ease-out}
+@keyframes pulse{0%{transform:translate(-50%,-50%) scale(0.5);opacity:1}100%{transform:translate(-50%,-50%) scale(2.5);opacity:0}}
+#compass{position:fixed;top:58px;right:10px;z-index:31;pointer-events:none;width:40px;height:40px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">
+  <div id="topbar">
+    <div class="sc">
+      <div>⚓ <span id="snEl">BRIGANTINE</span></div>
+      <div>💰 <span id="gEl">500</span> GOLD</div>
+      <div>👥 <span id="cEl">80</span> CREW</div>
+      <div>📅 DAY <span id="dEl">1</span></div>
+    </div>
+    <div class="sc" style="text-align:center">
+      <div style="color:#aac4ff;font-size:5px;margin-bottom:1px">HULL</div>
+      <div id="hpbar"></div>
+      <div style="margin-top:3px;color:#88ccff;font-size:5px">🔫 <span id="cnEl">8</span> CANNONS</div>
+      <div style="color:#88aaff;font-size:5px">🌬 WIND <span id="wdEl">E</span> <span id="wsEl"></span></div>
+    </div>
+    <div class="sc r">
+      <div>⭐ FAME <span id="fEl">0</span></div>
+      <div>💀 KILLS <span id="kEl">0</span></div>
+      <div>⚓ FLEET <span id="flEl">1</span></div>
+      <div style="color:#ff8866;font-size:5px">ERA <span id="eraEl">I</span></div>
+    </div>
+  </div>
+</div>
+<canvas id="minimap" width="110" height="88"></canvas>
+<canvas id="compass" width="40" height="40"></canvas>
+<div id="log"></div>
+<div id="pmenu"><h3 id="ptitle">PORT</h3><div id="pbody"></div><div class="mc" id="pclose">[ CLOSE ]</div></div>
+<div id="cmenu"><h3 id="ctitle">CAPTURED!</h3><div id="cbody"></div><div class="mc" id="cclose">[ CLOSE ]</div></div>
+<div id="tmenu"><h3 id="ttitle">TRADE</h3><div id="tbody"></div><div class="mc" id="tclose">[ CLOSE ]</div></div>
+<div id="era"><div class="etxt" id="eraTxt"></div></div>
+<div id="navpulse"></div>
+<script type="module" src="/src/client/main.ts"></script>
+</body>
+</html>

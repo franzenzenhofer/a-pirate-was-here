@@ -1,0 +1,167 @@
+import { SHIP_TYPES } from '../config/ships';
+import { SPD_SCALE, DAY_DURATION } from '../config/world';
+import type { EnemyShip } from '../core/types';
+import type { GameState } from '../sim/state/game-state';
+import { moveShip } from '../sim/nav/movement';
+import { fireBroadside } from '../sim/combat/naval';
+import { updateCannonball, createExplosion, createSplash, updateParticles } from '../sim/combat/damage';
+import { updateAIState, getAINavTarget, shouldFireAtPlayer, shouldFireAtEnemy, hasReachedPortTarget } from '../sim/ai/strategy';
+import { updateProgression, portUnderAttack } from '../sim/state/progression';
+import { crewWagesPerDay } from '../config/economy';
+import { followTarget } from '../renderer/camera';
+import type { Camera } from '../renderer/camera';
+import { updateWind } from '../sim/nav/wind';
+import { openCaptureMenu } from '../renderer/canvas/menus';
+import { addLog } from '../renderer/canvas/log';
+
+export function updateGame(gs: GameState, cam: Camera, dt: number, renderFn: () => void): void {
+  if (gs.paused) { renderFn(); return; }
+  updateWind(gs.wind, dt);
+  updatePlayer(gs, cam, dt);
+  updateEnemies(gs, dt);
+  updateCballs(gs, dt);
+  gs.particles = updateParticles(gs.particles, dt);
+  updateProgression(gs, dt);
+  renderFn();
+}
+
+function updatePlayer(gs: GameState, cam: Camera, dt: number): void {
+  const player = gs.player;
+  player.reloadT = Math.max(0, player.reloadT - dt);
+  player.dayT += dt;
+  if (player.dayT > DAY_DURATION) {
+    player.dayT = 0;
+    player.day++;
+    const wages = crewWagesPerDay(player.crew);
+    if (player.gold >= wages) player.gold -= wages;
+    else { player.crew = Math.max(1, player.crew - 2); addLog('Crew deserts — no pay!', 'r'); }
+  }
+  if (player.hp <= 0) return;
+
+  if (player.targetX !== null && player.targetY !== null) {
+    const st = SHIP_TYPES[player.tk];
+    const moved = moveShip(player, player.targetX, player.targetY,
+      dt * SPD_SCALE, st?.spd ?? 1.0, st?.turn ?? 1.0, gs.wind.angle, 1.0, gs.world.tiles);
+    if (Math.hypot(player.targetX - player.x, player.targetY - player.y) < 0.3) {
+      player.targetX = null; player.targetY = null; player.speed = 0;
+    }
+    if (moved) {
+      followTarget(cam, player.x, player.y, 0.07);
+      player.wakePoints.unshift({ x: player.x, y: player.y });
+      if (player.wakePoints.length > 25) player.wakePoints.pop();
+    }
+  }
+
+  autoFirePlayer(gs);
+  pickupTreasures(gs);
+}
+
+function autoFirePlayer(gs: GameState): void {
+  const player = gs.player;
+  if (player.reloadT > 0) return;
+  let near: EnemyShip | null = null;
+  let nd = player.rng;
+  for (const e of gs.enemies) {
+    if (e.sunk || e.disabled || e.captured) continue;
+    const d = Math.hypot(player.x - e.x, player.y - e.y);
+    if (d < nd) { nd = d; near = e; }
+  }
+  if (near) {
+    gs.cannonballs.push(...fireBroadside(player.x, player.y, player.angle, near.x, near.y, true, 2, player.rng, Math.min(player.cn, 5)));
+    player.reloadT = SHIP_TYPES[player.tk]?.rl ?? 5500;
+  }
+}
+
+function pickupTreasures(gs: GameState): void {
+  const p = gs.player;
+  for (const t of gs.treasures) {
+    if (!t.looted && Math.hypot(t.x + 0.5 - p.x, t.y + 0.5 - p.y) < 1.8) {
+      p.gold += t.gold; t.looted = true;
+      gs.particles.push(...createExplosion(t.x + 0.5, t.y + 0.5, '#ffdd00', 14));
+      addLog('💰 TREASURE: +' + t.gold + 'g!', 'g');
+    }
+  }
+}
+
+function updateEnemies(gs: GameState, dt: number): void {
+  for (const en of gs.enemies) {
+    if (en.sunk || en.captured) continue;
+    en.reloadT = Math.max(0, en.reloadT - dt);
+    if (en.disabled) {
+      en.speed = Math.max(0, en.speed * 0.96);
+      en.x += Math.cos(en.angle) * en.speed * dt * SPD_SCALE;
+      en.y += Math.sin(en.angle) * en.speed * dt * SPD_SCALE;
+      continue;
+    }
+    updateAIState(en, gs.player, dt, gs.world.tiles);
+    const { navX, navY } = getAINavTarget(en, gs.player);
+    const moved = moveShip(en, navX, navY, dt * SPD_SCALE, en.bspd, en.turnRate, gs.wind.angle, 0.9, gs.world.tiles);
+    if (moved) { en.wakePoints.unshift({ x: en.x, y: en.y }); if (en.wakePoints.length > 16) en.wakePoints.pop(); }
+    resolvePortAttack(gs, en);
+    fireEnemyWeapons(gs, en);
+  }
+}
+
+function resolvePortAttack(gs: GameState, en: EnemyShip): void {
+  if (!hasReachedPortTarget(en) || !en.attackTarget) return;
+  const result = portUnderAttack(en.attackTarget, en.cn, en.hp, en.maxHp, en.nat);
+  if (result.success) {
+    gs.particles.push(...createExplosion(en.attackTarget.x, en.attackTarget.y, '#ff4400', 18));
+    addLog('⚔️ ' + result.msg, 'o');
+  } else {
+    en.hp -= 2 + ~~(Math.random() * 3);
+    if (en.hp <= 0) en.sunk = true;
+    addLog(result.msg, 'b');
+  }
+  en.attackTarget = null; en.state = 'WANDER';
+}
+
+function fireEnemyWeapons(gs: GameState, en: EnemyShip): void {
+  if (shouldFireAtPlayer(en, gs.player)) {
+    gs.cannonballs.push(...fireBroadside(en.x, en.y, en.angle, gs.player.x, gs.player.y, false, 1 + en.ti * 0.4, en.rng, Math.min(en.cn, 5)));
+    en.reloadT = en.rl;
+  }
+  if (en.reloadT <= 0) {
+    for (const o of gs.enemies) {
+      if (o === en) continue;
+      if (shouldFireAtEnemy(en, o)) {
+        gs.cannonballs.push(...fireBroadside(en.x, en.y, en.angle, o.x, o.y, false, 0.8, en.rng, 2));
+        en.reloadT = en.rl; break;
+      }
+    }
+  }
+}
+
+export function updateCballs(gs: GameState, dt: number): void {
+  for (let i = gs.cannonballs.length - 1; i >= 0; i--) {
+    const b = gs.cannonballs[i]!;
+    const result = updateCannonball(b, dt, gs.player, gs.enemies, gs.world.tiles);
+    if (result.type === 'splash') { gs.particles.push(...createSplash(b.x, b.y)); gs.cannonballs.splice(i, 1); }
+    else if (result.type === 'miss' && b.dist > b.maxDist) { gs.cannonballs.splice(i, 1); }
+    else if (result.type === 'player_hit') {
+      gs.player.hp = Math.max(0, gs.player.hp - result.dmg);
+      gs.particles.push(...createExplosion(gs.player.x, gs.player.y, '#ff6622', 9));
+      addLog('💥 HIT! -' + ~~result.dmg + ' HP', 'r'); gs.cannonballs.splice(i, 1);
+      if (gs.player.hp <= 0) addLog('☠️ SHIP SUNK! Reload to continue', 'r');
+    } else if ((result.type === 'enemy_hit' || result.type === 'enemy_disabled') && result.target) {
+      result.target.hp -= result.dmg;
+      gs.particles.push(...createExplosion(result.target.x, result.target.y, '#ff8822', 7));
+      gs.cannonballs.splice(i, 1);
+      if (result.type === 'enemy_disabled') {
+        result.target.disabled = true; result.target.speed = 0;
+        addLog('🎯 ' + result.target.tk + ' DISABLED!', 'g');
+        const ref = result.target;
+        setTimeout(() => {
+          gs.paused = true;
+          openCaptureMenu(ref, gs.player, addLog, (e) => {
+            gs.particles.push(...createExplosion(e.x, e.y, '#ff6622', 20)); gs.paused = false;
+          });
+        }, 500);
+      }
+    } else if (result.type === 'friendly_fire' && result.target) {
+      result.target.hp -= result.dmg;
+      if (result.target.hp <= 0) { result.target.disabled = true; gs.particles.push(...createExplosion(result.target.x, result.target.y, '#ff8822', 6)); }
+      gs.cannonballs.splice(i, 1);
+    }
+  }
+}
