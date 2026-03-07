@@ -64,10 +64,12 @@ export function handlePointerUp(
   cam: Camera,
 ): TapResult | null {
   if (!input.panStart) return null;
+  const wasPanned = input.panned;
+  const tapStart = input.touchStart;
   resetInputState(input);
 
   // Was it a tap? (not a pan, within 550ms for better mobile forgiveness)
-  if (!input.panned && Date.now() - input.touchStart < 550) {
+  if (!wasPanned && Date.now() - tapStart < 550) {
     const wx = cam.x + cx / TILE_PX;
     const wy = cam.y + cy / TILE_PX;
     return { type: 'navigate', wx, wy };

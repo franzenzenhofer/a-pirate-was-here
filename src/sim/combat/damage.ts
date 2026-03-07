@@ -1,17 +1,20 @@
 import type { Cannonball, Particle, PlayerShip, EnemyShip } from '../../core/types';
+import { mkRawRng } from '../../core/rng';
 import { isSail } from '../world/gen';
+
+const vfxRng = mkRawRng(7777);
 
 /** Create explosion particles */
 export function createExplosion(wx: number, wy: number, col: string, count: number): Particle[] {
   const parts: Particle[] = [];
   for (let i = 0; i < count; i++) {
-    const a = Math.random() * Math.PI * 2;
-    const s = 0.025 + Math.random() * 0.06;
+    const a = vfxRng() * Math.PI * 2;
+    const s = 0.025 + vfxRng() * 0.06;
     parts.push({
       x: wx, y: wy,
       vx: Math.cos(a) * s, vy: Math.sin(a) * s,
       life: 1, maxLife: 1,
-      col, sz: 2 + Math.random() * 4,
+      col, sz: 2 + vfxRng() * 4,
     });
   }
   return parts;
@@ -21,8 +24,8 @@ export function createExplosion(wx: number, wy: number, col: string, count: numb
 export function createSplash(wx: number, wy: number): Particle[] {
   const parts: Particle[] = [];
   for (let i = 0; i < 4; i++) {
-    const a = Math.random() * Math.PI * 2;
-    const s = 0.008 + Math.random() * 0.015;
+    const a = vfxRng() * Math.PI * 2;
+    const s = 0.008 + vfxRng() * 0.015;
     parts.push({
       x: wx, y: wy,
       vx: Math.cos(a) * s, vy: Math.sin(a) * s,

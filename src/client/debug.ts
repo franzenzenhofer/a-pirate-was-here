@@ -39,8 +39,8 @@ export function mountDebugAPI(gs: GameState, cam: Camera): void {
         for (const e of gs.enemies) { if (!e.sunk && !e.captured) c[e.state] = (c[e.state] ?? 0) + 1; }
         return c;
       },
-      chasing: () => gs.enemies.filter(e => e.state === 'CHASE').map((_e, i) => inspectEnemy(gs, i)),
-      fleeing: () => gs.enemies.filter(e => e.state === 'FLEE').map((_e, i) => inspectEnemy(gs, i)),
+      chasing: () => gs.enemies.filter(e => e.state === 'CHASE').map(e => inspectEnemy(gs, gs.enemies.indexOf(e))),
+      fleeing: () => gs.enemies.filter(e => e.state === 'FLEE').map(e => inspectEnemy(gs, gs.enemies.indexOf(e))),
     },
 
     log: {
