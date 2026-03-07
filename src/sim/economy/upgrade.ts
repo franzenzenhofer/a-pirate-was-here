@@ -12,6 +12,10 @@ export interface UpgradeOption {
 const HULL_STEP = 4;
 const SAIL_STEP = 0.15;
 const RANGE_STEP = 1;
+const SPECIAL_SHIP_OFFERS = [
+  { key: 'FIRESHIP', fame: 40, blurb: 'volatile raider with brutal close pressure' },
+  { key: 'CORVETTE', fame: 90, blurb: 'agile warship with sharper broadsides' },
+] as const;
 
 function sailLimit(tk: string): number {
   if (tk === 'GALLEON' || tk === 'MAN_O_WAR') return 2;
@@ -90,21 +94,46 @@ export function getUpgradeOptions(player: PlayerShip): UpgradeOption[] {
     const nextStats = SHIP_TYPES[nextKey]!;
     const upgradeCost = nextStats.loot * 3;
     options.push({
-      name: `🚢 UPGRADE TO ${nextKey}`,
+      name: `🚢 COMMISSION ${nextKey}`,
       cost: upgradeCost,
       description: `${nextStats.hp}HP ${nextStats.cn}cn ${nextStats.spd.toFixed(1)}spd (${upgradeCost}g)`,
       canAfford: player.gold >= upgradeCost,
-      action: () => {
-        const oldBase = SHIP_TYPES[player.tk] ?? nextStats;
-        const cannonBonus = Math.max(0, player.cn - oldBase.cn);
-        player.gold -= upgradeCost;
-        player.tk = nextKey;
-        player.cn = nextStats.cn + cannonBonus;
-        applyShipBonuses(player, false);
-        return `Upgraded to ${nextKey}!`;
-      },
+      action: () => refitShip(player, nextKey, upgradeCost),
     });
   }
+  appendSpecialShipOffers(options, player);
 
   return options;
+}
+
+function appendSpecialShipOffers(options: UpgradeOption[], player: PlayerShip): void {
+  const seen = new Set(options.map(option => option.name));
+  for (const offer of SPECIAL_SHIP_OFFERS) {
+    if (player.fame < offer.fame || player.tk === offer.key) continue;
+    const target = SHIP_TYPES[offer.key];
+    const current = SHIP_TYPES[player.tk];
+    if (!target || !current) continue;
+    const cost = Math.max(280, (target.loot - current.loot) * 2 + 320);
+    const name = `⚓ BUY ${offer.key}`;
+    if (seen.has(name)) continue;
+    options.push({
+      name,
+      cost,
+      description: `${target.hp}HP ${target.cn}cn ${target.spd.toFixed(1)}spd · ${offer.blurb} (${cost}g)`,
+      canAfford: player.gold >= cost,
+      action: () => refitShip(player, offer.key, cost),
+    });
+  }
+}
+
+function refitShip(player: PlayerShip, nextKey: string, cost: number): string {
+  const current = SHIP_TYPES[player.tk];
+  const target = SHIP_TYPES[nextKey];
+  if (!current || !target) return `Unknown ship class ${nextKey}.`;
+  const cannonBonus = Math.max(0, player.cn - current.cn);
+  player.gold -= cost;
+  player.tk = nextKey;
+  player.cn = target.cn + cannonBonus;
+  applyShipBonuses(player, false);
+  return `Commissioned a ${nextKey}! Fresh hull, same legend.`;
 }

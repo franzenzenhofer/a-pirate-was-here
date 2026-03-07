@@ -1,13 +1,22 @@
 import { displaySailingFlag, displayShipFlag, displayShipName } from '../core/ship-identity';
+import { serviceProfile } from '../sim/state/port-actions';
+import { assessPortRaid } from '../sim/state/progression';
 import type { GameState } from '../sim/state/game-state';
 import { selectCombatTarget } from './combat-hud';
+import { nearestPort } from './game-actions-available';
+import { crewWagesPerDay } from '../config/economy';
 
 export function bindInspectPanel(onToggle: () => void): void {
   window.addEventListener('keydown', (event) => {
-    if (event.key !== 'Tab') return;
-    event.preventDefault();
-    onToggle();
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      onToggle();
+      return;
+    }
+    if (event.key === 'Escape') setInspectOpen(false);
   });
+  const button = document.getElementById('inspectBtn');
+  if (button) button.onclick = () => onToggle();
   const close = document.getElementById('inspectClose');
   if (close) close.onclick = () => setInspectOpen(false);
 }
@@ -25,28 +34,14 @@ export function renderInspectPanel(gs: GameState): void {
   if (!panel || !title || !body || panel.style.display !== 'block') return;
 
   const target = selectCombatTarget(gs.player, gs.enemies);
-  title.textContent = target ? `${displayShipName(gs.player)} VS ${displayShipName(target)}` : `${displayShipName(gs.player)} REPORT`;
-  body.innerHTML = [
-    metric(`FLAG`, `${displayShipFlag(gs.player)} · ${displaySailingFlag(gs.player)}`),
-    metric(`HEALTH`, `${Math.round(gs.player.hp)}/${Math.round(gs.player.maxHp)}`),
-    metric(`CREW`, `${gs.player.crew}`),
-    metric(`GOLD`, `${gs.player.gold}`),
-    metric(`UNSHARED`, `${gs.player.unsharedGold}`),
-    metric(`CANNONS`, `${gs.player.cn}`),
-    metric(`RELOAD`, `${(gs.player.reloadT / 1000).toFixed(1)}s`),
-    metric(`RANGE`, `${gs.player.rng.toFixed(1)}`),
-    metric(`SPEED`, `${gs.player.speed.toFixed(2)}`),
-    metric(`RAM`, `${gs.player.ramBonus}`),
-    metric(`FLEET`, `${1 + gs.player.fleet.length}`),
-    metric(`SEED`, `${gs.settings.preferredSeed || gs.seed}`),
-  ].join('') + (target ? [
-    metric(`TARGET`, `${displayShipName(target)} · ${displayShipFlag(target)}`),
-    metric(`TARGET HP`, `${Math.round(target.hp)}/${Math.round(target.maxHp)}`),
-    metric(`TARGET CREW`, target.role),
-    metric(`TARGET RELOAD`, `${(target.reloadT / 1000).toFixed(1)}s`),
-    metric(`TARGET RANGE`, `${target.rng.toFixed(1)}`),
-    metric(`TARGET STATE`, `${target.state}`),
-  ].join('') : '');
+  const nearbyPort = nearestPort(gs)?.port ?? null;
+  title.textContent = target
+    ? `${displayShipName(gs.player)} VS ${displayShipName(target)}`
+    : nearbyPort
+      ? `${displayShipName(gs.player)} · ${nearbyPort.name}`
+      : `${displayShipName(gs.player)} REPORT`;
+  body.innerHTML = buildPlayerMetrics(gs).join('')
+    + (target ? buildTargetMetrics(gs, target).join('') : nearbyPort ? buildPortMetrics(gs, nearbyPort).join('') : '');
 }
 
 function metric(label: string, value: string): string {
@@ -56,4 +51,62 @@ function metric(label: string, value: string): string {
 function setInspectOpen(open: boolean): void {
   const panel = document.getElementById('inspectPanel');
   if (panel) panel.style.display = open ? 'block' : 'none';
+}
+
+function buildPlayerMetrics(gs: GameState): string[] {
+  return [
+    metric('FLAG', `${displayShipFlag(gs.player)} · ${displaySailingFlag(gs.player)}`),
+    metric('HEALTH', `${Math.round(gs.player.hp)}/${Math.round(gs.player.maxHp)}`),
+    metric('CREW', `${gs.player.crew}`),
+    metric('GOLD', `${gs.player.gold}`),
+    metric('UNSHARED', `${gs.player.unsharedGold}`),
+    metric('WAGES / DAY', `${crewWagesPerDay(gs.player.crew)}`),
+    metric('CANNONS', `${gs.player.cn}`),
+    metric('RELOAD', `${(gs.player.reloadT / 1000).toFixed(1)}s`),
+    metric('RANGE', `${gs.player.rng.toFixed(1)}`),
+    metric('SPEED', `${gs.player.speed.toFixed(2)}`),
+    metric('RAM', `${gs.player.ramBonus}`),
+    metric('FLEET', `${1 + gs.player.fleet.length}`),
+    metric('SEED', `${gs.settings.preferredSeed || gs.seed}`),
+  ];
+}
+
+function buildTargetMetrics(gs: GameState, target: NonNullable<ReturnType<typeof selectCombatTarget>>): string[] {
+  return [
+    metric('TARGET', `${displayShipName(target)} · ${displayShipFlag(target)}`),
+    metric('TARGET HEALTH', `${Math.round(target.hp)}/${Math.round(target.maxHp)}`),
+    metric('TARGET ROLE', `${target.role} · ${target.tier}`),
+    metric('TARGET RELOAD', `${(target.reloadT / 1000).toFixed(1)}s`),
+    metric('TARGET RANGE', `${target.rng.toFixed(1)}`),
+    metric('TARGET SPEED', `${target.speed.toFixed(2)}`),
+    metric('TARGET DIST', `${Math.hypot(target.x - gs.player.x, target.y - gs.player.y).toFixed(1)}`),
+    metric('TARGET INTENT', describeIntent(target.state)),
+  ];
+}
+
+function buildPortMetrics(gs: GameState, port: NonNullable<ReturnType<typeof nearestPort>>['port']): string[] {
+  const services = serviceProfile(port, gs.player);
+  const raid = assessPortRaid(port, gs.player.cn, gs.player.hp, gs.player.maxHp);
+  const serviceSummary = port.rel === 'friendly'
+    ? `repair, recruit +${services.recruitCount}, cannons, trade`
+    : port.rel === 'neutral'
+      ? 'trade, tribute, buy legend'
+      : 'raid only';
+  return [
+    metric('PORT', `${port.name} · ${port.nat}`),
+    metric('RELATION', `${port.rel.toUpperCase()}`),
+    metric('WEALTH', `${Math.round(port.wealth)}g`),
+    metric('GARRISON', `${port.garrison} · ${port.cannons} cannons`),
+    metric('RAID ODDS', `${Math.round(raid.winChance * 100)}% · ${raid.rating}`),
+    metric('SERVICES', serviceSummary),
+  ];
+}
+
+function describeIntent(state: string): string {
+  if (state === 'MEGA_CHARGE') return 'Charging';
+  if (state === 'MEGA_STUNNED' || state === 'CRAB_EXPOSED') return 'Stunned';
+  if (state === 'FLEE') return 'Fleeing';
+  if (state === 'CHASE') return 'Chasing';
+  if (state === 'PORT_ATTACK') return 'Raiding port';
+  return 'Maneuvering';
 }

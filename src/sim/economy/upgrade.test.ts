@@ -35,7 +35,7 @@ describe('getUpgradeOptions', () => {
 
   it('ship upgrade changes ship type', () => {
     const p = mkPlayer({ gold: 10000 });
-    const shipOpt = getUpgradeOptions(p).find(o => o.name.includes('FRIGATE'));
+    const shipOpt = getUpgradeOptions(p).find(o => o.name.includes('COMMISSION FRIGATE'));
     expect(shipOpt).toBeDefined();
     shipOpt!.action();
     expect(p.tk).toBe('FRIGATE');
@@ -45,9 +45,16 @@ describe('getUpgradeOptions', () => {
     const p = mkPlayer({ gold: 12000 });
     getUpgradeOptions(p).find(o => o.name.includes('HULL'))!.action();
     getUpgradeOptions(p).find(o => o.name.includes('RANGE'))!.action();
-    getUpgradeOptions(p).find(o => o.name.includes('FRIGATE'))!.action();
+    getUpgradeOptions(p).find(o => o.name.includes('COMMISSION FRIGATE'))!.action();
     expect(p.maxHp).toBeGreaterThan(22);
     expect(p.rng).toBeGreaterThan(6.5);
+  });
+
+  it('offers special shipyard hulls once fame is high enough', () => {
+    const p = mkPlayer({ fame: 100, gold: 10000 });
+    const opts = getUpgradeOptions(p);
+    expect(opts.some(o => o.name.includes('BUY FIRESHIP'))).toBe(true);
+    expect(opts.some(o => o.name.includes('BUY CORVETTE'))).toBe(true);
   });
 
   it('cannot afford with low gold', () => {

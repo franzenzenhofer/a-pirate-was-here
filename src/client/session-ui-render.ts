@@ -3,6 +3,7 @@ import { latestArchive } from '../sim/state/archive';
 import type { GameState } from '../sim/state/game-state';
 import { BUILD_TIMESTAMP, BUILD_VERSION } from '../generated/build-version';
 import { renderCombatHud } from './session-ui-combat';
+import { renderContextHint } from './session-ui-context';
 
 export function syncSessionUI(gs: GameState): void {
   applySettingsUI(gs);
@@ -10,6 +11,7 @@ export function syncSessionUI(gs: GameState): void {
   renderArchive(gs);
   renderObjectives(gs);
   renderCombatHud(gs);
+  renderContextHint(gs);
   renderBuildVersion();
 }
 

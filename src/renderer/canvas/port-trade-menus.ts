@@ -2,6 +2,8 @@ import type { PlayerShip, Port } from '../../core/types';
 import { getTradeInfo, buyGoods, sellGoods } from '../../sim/economy/trade';
 import { cargoCapacity } from '../../sim/state/fleet';
 import { getUpgradeOptions } from '../../sim/economy/upgrade';
+import { crewWagesPerDay } from '../../config/economy';
+import { SHIP_TYPES } from '../../config/ships';
 import type { LogFn } from './log';
 
 const MENU_FONT = 16;
@@ -73,7 +75,7 @@ export function openTradeMenu(port: Port, player: PlayerShip, log: LogFn, onClos
 
 export function openUpgradeMenu(player: PlayerShip, log: LogFn, onClose: () => void): void {
   const menu = document.getElementById('tmenu')!;
-  document.getElementById('ttitle')!.textContent = '🛠️ SHIPYARD UPGRADES';
+  document.getElementById('ttitle')!.textContent = '🛠️ SHIPYARD & CREW';
   const body = document.getElementById('tbody')!;
   body.innerHTML = '';
   for (const opt of getUpgradeOptions(player)) {
@@ -85,7 +87,11 @@ export function openUpgradeMenu(player: PlayerShip, log: LogFn, onClose: () => v
   }
   const footer = document.createElement('div');
   footer.style.cssText = `color:#f0c040;font-size:${MENU_FONT}px;margin-top:14px;text-align:center`;
-  footer.textContent = `💰 ${player.gold} GOLD`; body.appendChild(footer);
+  const stats = SHIP_TYPES[player.tk];
+  footer.textContent = stats
+    ? `💰 ${player.gold} GOLD · ${player.tk} · ${stats.hp}HP ${stats.cn}CN ${stats.spd.toFixed(1)}SPD · CREW PAY ${crewWagesPerDay(player.crew)}/DAY`
+    : `💰 ${player.gold} GOLD`;
+  body.appendChild(footer);
   menu.style.display = 'block';
   document.getElementById('tclose')!.onclick = () => { menu.style.display = 'none'; onClose(); };
 }

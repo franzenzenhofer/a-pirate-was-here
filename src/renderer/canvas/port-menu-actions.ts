@@ -1,4 +1,5 @@
 import type { PlayerShip, Port } from '../../core/types';
+import { crewWagesPerDay } from '../../config/economy';
 import type { LogFn } from './log';
 import { mkBtn } from './menu-button';
 
@@ -43,13 +44,27 @@ export function addFriendlyServices(
   }, log, close));
   mkBtn(body, '📦 TRADE GOODS', 'b', () => { close(); actions.onTrade(port); });
   mkBtn(body, '🛠️ UPGRADES', 'b', () => { close(); actions.onUpgrade(port); });
+  mkBtn(body, `👋 RELEASE 10 CREW (save ${crewWagesPerDay(10)}/day)`, player.crew > 10 ? 'b' : 'gr', () => completeAction(player.crew > 10, 'You need at least 10 crew to keep the ship working.', () => {
+    player.crew = Math.max(10, player.crew - 10);
+    log('10 crew took shore leave. Wages ease for now.', 'o');
+  }, log, close));
   mkBtn(body, '🗺 BUY RUMOR', 'b', () => { actions.onRumor(port); close(); });
   mkBtn(body, '🍻 BUY DRINKS FOR THE TOWN', 'g', () => { actions.onBuyLegend(port); close(); });
   mkBtn(body, '💰 SELL PLUNDER', 'y', () => { actions.onSellPlunder(port); close(); });
 }
 
 export function completeIfAffordable(canAfford: boolean, action: () => void, log: LogFn, close: () => void): void {
-  if (canAfford) action();
-  else log('Not enough gold!', 'r');
+  completeAction(canAfford, 'Not enough gold!', action, log, close);
+}
+
+function completeAction(
+  canProceed: boolean,
+  failMessage: string,
+  action: () => void,
+  log: LogFn,
+  close: () => void,
+): void {
+  if (canProceed) action();
+  else log(failMessage, 'r');
   close();
 }

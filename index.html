@@ -48,7 +48,14 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;posit
 #navpulse{position:fixed;z-index:25;pointer-events:none;display:none;width:24px;height:24px;border:2px solid rgba(255,220,60,0.6);border-radius:50%;animation:pulse 0.6s ease-out}
 @keyframes pulse{0%{transform:translate(-50%,-50%) scale(0.5);opacity:1}100%{transform:translate(-50%,-50%) scale(2.5);opacity:0}}
     #compass{position:fixed;top:142px;left:auto;right:16px;z-index:31;pointer-events:none;width:72px;height:72px}
-    #cornerBtns{position:fixed;right:16px;bottom:16px;z-index:35;display:flex;gap:10px}
+    #cornerBtns{position:fixed;right:16px;bottom:16px;z-index:35;display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+    #contextBar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:34;pointer-events:none;background:rgba(4,10,20,0.92);border:1px solid #334477;padding:10px 14px;min-width:min(50vw,640px);max-width:min(70vw,820px);text-align:center;box-shadow:0 0 14px #0008}
+    #contextBar[data-tone="g"]{border-color:#2f8d5a}
+    #contextBar[data-tone="r"]{border-color:#9b3f3f}
+    #contextBar[data-tone="o"]{border-color:#9c7440}
+    #contextBar[data-tone="b"]{border-color:#4466aa}
+    #contextTitle{color:#f0c040;font-size:var(--ui-font-sm);margin-bottom:6px}
+    #contextDetail{color:#aac4ff;font-size:var(--ui-font-sm);line-height:1.5}
     #questBox{position:fixed;left:16px;top:232px;z-index:34;background:rgba(4,10,20,0.88);border:1px solid #334477;padding:10px 12px;min-width:320px}
     #questLine,#eventLine,#fleetLine,#milestoneLine{font-size:var(--ui-font-sm);line-height:1.5}
     #questLine{color:#88ffaa}#eventLine{color:#ffcc88}
@@ -113,6 +120,7 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;posit
       .combatValue{text-align:left}
       #log{bottom:96px;max-width:calc(100vw - 32px)}
       #cornerBtns{right:16px;bottom:16px}
+      #contextBar{left:16px;right:16px;bottom:76px;transform:none;min-width:0;max-width:none}
       #inspectBody{grid-template-columns:1fr}
     }
     body.reduced-motion .le,
@@ -154,7 +162,8 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;posit
     </div>
   </div>
 </div>
-<div id="cornerBtns"><button class="tb" id="archiveBtn">LOG</button><button class="tb" id="settingsBtn">SETTINGS</button></div>
+<div id="cornerBtns"><button class="tb" id="archiveBtn">LOG</button><button class="tb" id="inspectBtn">DETAILS</button><button class="tb" id="settingsBtn">SETTINGS</button></div>
+<div id="contextBar" data-tone="b"><div id="contextTitle">OPEN SEA</div><div id="contextDetail">Chase rumors, raid trade lanes, and use ports to control the pace of your voyage.</div></div>
 <div id="questBox"><div id="questLine">QUEST: NONE</div><div id="eventLine">NO LEGEND ACTIVE</div><div id="fleetLine">FLEET: SOLO</div><div id="milestoneLine">SEED 42</div></div>
 <div id="crewBox">
   <div id="crewTitle">CREW STATE</div>
