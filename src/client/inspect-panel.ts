@@ -1,5 +1,5 @@
 import { displaySailingFlag, displayShipFlag, displayShipName } from '../core/ship-identity';
-import { serviceProfile } from '../sim/state/port-actions';
+import { portPlunderMultiplier, serviceProfile } from '../sim/state/port-actions';
 import { assessPortRaid } from '../sim/state/progression';
 import type { GameState } from '../sim/state/game-state';
 import { selectCombatTarget } from './combat-hud';
@@ -98,6 +98,7 @@ function buildPortMetrics(gs: GameState, port: NonNullable<ReturnType<typeof nea
     metric('WEALTH', `${Math.round(port.wealth)}g`),
     metric('GARRISON', `${port.garrison} · ${port.cannons} cannons`),
     metric('RAID ODDS', `${Math.round(raid.winChance * 100)}% · ${raid.rating}`),
+    metric('PLUNDER SALE', `${Math.round(portPlunderMultiplier(port, gs.player) * 100)}%`),
     metric('SERVICES', serviceSummary),
   ];
 }

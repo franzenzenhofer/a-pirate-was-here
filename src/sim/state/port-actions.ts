@@ -13,6 +13,7 @@ export interface PortServiceProfile {
   recruitCount: number;
   repairFactor: number;
   cannonCost: number;
+  plunderMultiplier: number;
   tradeBonusText: string | null;
 }
 
@@ -60,21 +61,38 @@ export function diplomacySummary(_player: PlayerShip, port: Port): PortDiplomacy
 }
 
 export function serviceProfile(port: Port, player: PlayerShip): PortServiceProfile {
+  const plunderMultiplier = portPlunderMultiplier(port, player);
   const recruitBase = port.nat === 'PIRATE' ? 36 : port.nat === 'FRANCE' ? 42 : 50;
   const recruitCost = player.fame > 300 && (port.nat === 'PIRATE' || port.rel === 'friendly') ? 0 : recruitBase;
   const recruitCount = port.nat === 'PIRATE' ? 14 : port.nat === 'ENGLAND' ? 8 : 10;
   const repairFactor = port.nat === 'FRANCE' ? 0.8 : port.nat === 'SPAIN' ? 0.7 : 0.6;
   const cannonCost = port.nat === 'ENGLAND' ? 110 : port.nat === 'SPAIN' ? 135 : 150;
   const tradeBonusText =
-    port.nat === 'DUTCH' ? `DUTCH BROKERS: sell high, hold ${cargoCapacity(player) + fleetSummary(player).cargo} total.` :
-    port.nat === 'PIRATE' ? 'PIRATE HARBOR: crew arrives fast, law looks away.' :
-    null;
+    port.nat === 'DUTCH' ? `DUTCH BROKERS: best fence in the sea. Plunder sells at ${Math.round(plunderMultiplier * 100)}%. Hold ${cargoCapacity(player) + fleetSummary(player).cargo}.` :
+    port.nat === 'PIRATE' ? `PIRATE HARBOR: crew arrives fast, law looks away. Plunder sells at ${Math.round(plunderMultiplier * 100)}%.` :
+    port.nat === 'FRANCE' ? `FRENCH YARDS: finer repairs and cultured brokers. Plunder sells at ${Math.round(plunderMultiplier * 100)}%.` :
+    `HARBOR MARKET: plunder sells at ${Math.round(plunderMultiplier * 100)}%.`;
 
   return {
     recruitCost,
     recruitCount,
     repairFactor,
     cannonCost,
+    plunderMultiplier,
     tradeBonusText,
   };
+}
+
+export function portPlunderMultiplier(port: Port | null, player: Pick<PlayerShip, 'fame'>): number {
+  if (!port) return 1;
+  const relationBoost = port.rel === 'friendly' ? 0.08 : port.rel === 'enemy' ? -0.18 : 0;
+  const fameBoost = player.fame >= 800 ? 0.05 : player.fame >= 300 ? 0.02 : 0;
+  const nationBias =
+    port.nat === 'DUTCH' ? 0.16 :
+    port.nat === 'PIRATE' ? 0.1 :
+    port.nat === 'FRANCE' ? 0.06 :
+    port.nat === 'ENGLAND' ? 0.03 :
+    port.nat === 'SPAIN' ? -0.02 :
+    0;
+  return Math.max(0.72, Math.min(1.34, 1 + relationBoost + fameBoost + nationBias));
 }

@@ -61,19 +61,19 @@ function getPortHint(gs: GameState): ContextHint | null {
   const nearest = nearestPort(gs);
   if (!nearest) return null;
   const port = nearest.port;
+  const services = serviceProfile(port, gs.player);
   if (port.rel === 'friendly') {
-    const services = serviceProfile(port, gs.player);
     const repairAmount = ~~(gs.player.maxHp * Math.min(0.85, services.repairFactor + 0.1));
     return {
       title: `${port.name} · FRIENDLY PORT`,
-      detail: `Tap to dock · repair +${repairAmount} HP · recruit +${services.recruitCount} · trade and upgrades`,
+      detail: `Tap to dock · repair +${repairAmount} HP · recruit +${services.recruitCount} · plunder ${Math.round(services.plunderMultiplier * 100)}%`,
       tone: 'g',
     };
   }
   if (port.rel === 'neutral') {
     return {
       title: `${port.name} · NEUTRAL PORT`,
-      detail: 'Tap to dock · trade at sharper prices · pay tribute or build your legend',
+      detail: `Tap to dock · trade at sharper prices · plunder ${Math.round(services.plunderMultiplier * 100)}% · pay tribute or build your legend`,
       tone: 'b',
     };
   }
@@ -127,24 +127,12 @@ function getCrewHint(gs: GameState): ContextHint | null {
 
 function getVoyageHint(gs: GameState): ContextHint {
   if (gs.activeQuest && !gs.activeQuest.completed) {
-    return {
-      title: gs.activeQuest.title.toUpperCase(),
-      detail: `${gs.activeQuest.detail} · ${gs.activeQuest.progress}/${gs.activeQuest.goal}`,
-      tone: 'b',
-    };
+    return { title: gs.activeQuest.title.toUpperCase(), detail: `${gs.activeQuest.detail} · ${gs.activeQuest.progress}/${gs.activeQuest.goal}`, tone: 'b' };
   }
   if (gs.activeEvent?.active) {
-    return {
-      title: gs.activeEvent.title.toUpperCase(),
-      detail: gs.activeEvent.detail,
-      tone: 'o',
-    };
+    return { title: gs.activeEvent.title.toUpperCase(), detail: gs.activeEvent.detail, tone: 'o' };
   }
-  return {
-    title: 'OPEN SEA',
-    detail: 'Chase rumors, raid trade lanes, and use ports to control the pace of your voyage.',
-    tone: 'b',
-  };
+  return { title: 'OPEN SEA', detail: 'Chase rumors, raid trade lanes, and use ports to control the pace of your voyage.', tone: 'b' };
 }
 
 function describeEnemyIntent(state: string): string {

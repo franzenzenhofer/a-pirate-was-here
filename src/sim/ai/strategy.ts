@@ -1,15 +1,14 @@
 import type { GameState } from '../state/game-state';
 import type { EnemyShip, PlayerShip } from '../../core/types';
-import { angleTo } from '../../core/math';
 import { isSail } from '../world/gen';
 import { emitEvent } from '../state/events';
 import { randomChance, randomFloat } from '../state/random';
 import { spawnCargoPickup } from '../state/pickups';
+import { hasGoodBroadside, preferredBroadsidePoint } from '../combat/shot-selection';
+import { desiredCombatRange, shouldMerchantPanic, shouldPiratePressTarget } from './strategy-rules';
 
 /** Vision range — AI only reacts to what it can "see" (fog of war) */
 const VISION_RANGE = 18;
-
-/** Optional AI transition logger — set by debug module */
 export let onAITransition: ((en: EnemyShip, from: string, to: string, reason: string) => void) | null = null;
 
 export function setAITransitionLogger(fn: typeof onAITransition): void {
@@ -23,11 +22,6 @@ function transition(en: EnemyShip, to: string, reason: string): void {
   if (onAITransition) onAITransition(en, from, to, reason);
 }
 
-/**
- * AI Strategy — decides what the enemy should do each frame.
- * AI uses the SAME movement and combat as the player.
- * FOG OF WAR: AI only acts on player within VISION_RANGE — no cheating.
- */
 export function updateAIState(
   gs: GameState,
   en: EnemyShip,
@@ -43,12 +37,15 @@ export function updateAIState(
 
   en.stTimer += dt;
 
-  // State transitions — only chase if AI can SEE the player
   if (shouldFlee && canSeePlayer) {
     transition(en, 'FLEE', 'hp=' + ~~(en.hp / en.maxHp * 100) + '% < flee=' + ~~(en.beh.flee * 100) + '%');
   } else if (shouldFlee && en.state === 'FLEE' && !canSeePlayer) {
     transition(en, 'WANDER', 'lost sight while fleeing');
-  } else if (canSeePlayer && dpP < 12 && en.beh.aggro > 0 && randomChance(gs, en.beh.aggro * 0.002 * dt)) {
+  } else if (
+    canSeePlayer
+    && dpP < 12
+    && (en.beh.aggro > 0 && randomChance(gs, en.beh.aggro * 0.002 * dt) || shouldPiratePressTarget(en.role, player, dpP))
+  ) {
     transition(en, 'CHASE', 'spotted player d=' + ~~dpP + ' aggro=' + ~~(en.beh.aggro * 100) + '%');
     en.stTimer = 0;
   } else if (en.attackTarget) {
@@ -57,7 +54,6 @@ export function updateAIState(
     transition(en, 'WANDER', en.stTimer > 8000 ? 'chase timeout' : 'lost sight');
   }
 
-  // Wander: pick new random sea target periodically
   if (en.state === 'WANDER') {
     en.changeT -= dt;
     if (en.changeT < 0) {
@@ -74,16 +70,15 @@ export function updateAIState(
     }
   }
 
-  if (canSeePlayer && en.role === 'MERCHANT' && !en.intimidated && player.fame > 500 && dpP < 8) {
+  if (canSeePlayer && en.role === 'MERCHANT' && shouldMerchantPanic(player, en, dpP)) {
     en.intimidated = true;
     en.cargoDropDone = true;
     en.state = 'FLEE';
-    spawnCargoPickup(gs, en.x + 0.5, en.y, Math.max(60, Math.round(en.loot * 0.35)), en.name ?? en.tk);
+    spawnCargoPickup(gs, en.x + 0.5, en.y, Math.max(60, Math.round(en.loot * 0.45)), en.name ?? en.tk);
     emitEvent(gs, { kind: 'log', msg: `${en.name ?? en.tk} panics and dumps cargo overboard!`, tone: 'o' });
   }
 }
 
-/** Get the navigation target based on AI state */
 export function getAINavTarget(
   en: EnemyShip,
   player: PlayerShip,
@@ -96,14 +91,18 @@ export function getAINavTarget(
     navY = en.y + (en.y - player.y) * 3;
   } else if (en.state === 'CHASE') {
     const dpP = Math.hypot(en.x - player.x, en.y - player.y);
-    if (dpP > en.rng * 0.7) {
+    const standoffRange = desiredCombatRange(en, player);
+    if (hasGoodBroadside(en, player) && en.reloadT <= en.rl * 0.35) {
+      const hold = preferredBroadsidePoint(en, player);
+      navX = hold.x;
+      navY = hold.y;
+    } else if (dpP > standoffRange) {
       navX = player.x;
       navY = player.y;
     } else {
-      // Circle strafe — position broadside to target
-      const perpAngle = angleTo(en.x, en.y, player.x, player.y) + Math.PI * 0.5;
-      navX = player.x + Math.cos(perpAngle) * en.rng * 0.6;
-      navY = player.y + Math.sin(perpAngle) * en.rng * 0.6;
+      const hold = preferredBroadsidePoint(en, player);
+      navX = hold.x;
+      navY = hold.y;
     }
   } else if (en.state === 'PORT_ATTACK' && en.attackTarget) {
     navX = en.attackTarget.x;
@@ -113,14 +112,12 @@ export function getAINavTarget(
   return { navX, navY };
 }
 
-/** Check if enemy should fire at player — requires vision */
 export function shouldFireAtPlayer(en: EnemyShip, player: PlayerShip): boolean {
   if (en.state !== 'CHASE' || en.reloadT > 0) return false;
   const dpP = Math.hypot(en.x - player.x, en.y - player.y);
   return dpP < en.rng && dpP < VISION_RANGE;
 }
 
-/** Check if enemy should fire at another enemy */
 export function shouldFireAtEnemy(en: EnemyShip, other: EnemyShip): boolean {
   if (en.reloadT > 0 || other.sunk || other.disabled) return false;
 
@@ -135,7 +132,6 @@ export function shouldFireAtEnemy(en: EnemyShip, other: EnemyShip): boolean {
   return d2 < en.rng * 0.8 && d2 < VISION_RANGE;
 }
 
-/** Check if enemy has reached port attack target */
 export function hasReachedPortTarget(en: EnemyShip): boolean {
   if (!en.attackTarget) return false;
   return Math.hypot(en.x - en.attackTarget.x, en.y - en.attackTarget.y) < 4;

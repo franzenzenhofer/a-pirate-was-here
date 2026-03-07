@@ -32,8 +32,22 @@ describe('sellPlunder', () => {
       id: asPortId(1), x: 0, y: 0, name: 'HAVANA', nat: 'SPAIN', rel: 'neutral',
       garrison: 0, wealth: 0, cannons: 0, attackTimer: 0, defFleet: [], prices: {},
     });
-    expect(msg).toContain('260g');
-    expect(gs.player.gold).toBe(360);
+    expect(msg).toContain('at HAVANA');
+    expect(gs.player.gold).toBe(296);
     expect(gs.plunder.length).toBe(0);
+  });
+
+  it('pays better rates at dutch friendly ports', () => {
+    const neutral = mkState();
+    const dutch = mkState();
+    sellPlunder(neutral, {
+      id: asPortId(1), x: 0, y: 0, name: 'HAVANA', nat: 'SPAIN', rel: 'neutral',
+      garrison: 0, wealth: 0, cannons: 0, attackTimer: 0, defFleet: [], prices: {},
+    });
+    sellPlunder(dutch, {
+      id: asPortId(2), x: 0, y: 0, name: 'WILLEMSTAD', nat: 'DUTCH', rel: 'friendly',
+      garrison: 0, wealth: 0, cannons: 0, attackTimer: 0, defFleet: [], prices: {},
+    });
+    expect(dutch.player.gold).toBeGreaterThan(neutral.player.gold);
   });
 });
