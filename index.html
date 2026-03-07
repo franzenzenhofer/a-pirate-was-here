@@ -109,19 +109,38 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;posit
     .statLabel{color:#aac4ff}
     .flagBadge{display:inline-flex;align-items:center;justify-content:center;min-width:48px;padding:4px 6px;border:2px solid #f2f4f8;background:#111318;color:#f2f4f8;line-height:1}
     @media (max-width: 960px){
-      #topbar{grid-template-columns:1fr;gap:10px}
-      .sc,.sc.r,.sc.c{text-align:left}
-      #hpbar{justify-content:flex-start}
-      #compass{top:auto;left:auto;bottom:16px;right:16px}
-      #questBox{top:244px;right:16px;min-width:0}
-      #crewBox{top:auto;left:16px;right:16px;bottom:176px;min-width:0}
-      #combatHud{left:16px;right:16px;bottom:168px;transform:none;min-width:0}
-      .combatRow{grid-template-columns:1fr;gap:8px}
+      #topbar{grid-template-columns:1fr auto;gap:4px 10px;padding:6px 10px 8px}
+      .sc{font-size:max(10px, calc(10px * var(--ui-scale)));line-height:1.4}
+      .sc.r{display:none}
+      .sc.c{text-align:left}
+      #hpbar{justify-content:flex-start;margin-top:4px}
+      .hs{width:9px;height:9px}
+      .statFlag{display:none}
+      #compass{top:auto;left:auto;bottom:68px;right:10px;width:48px;height:48px}
+      #questBox{display:none}
+      #crewBox{top:auto;left:10px;right:10px;bottom:120px;min-width:0;padding:6px 10px}
+      #crewTitle{font-size:max(9px, calc(9px * var(--ui-scale)))}
+      #crewMeta{font-size:max(9px, calc(9px * var(--ui-scale)));margin-bottom:4px}
+      .crewTrack{height:8px;margin:3px 0 6px}
+      #crewActions{flex-direction:row;flex-wrap:wrap;gap:6px}
+      .tb{min-height:44px;padding:10px 12px;font-size:max(11px, calc(11px * var(--ui-scale)))}
+      #combatHud{left:10px;right:10px;bottom:120px;transform:none;min-width:0;padding:10px}
+      .combatRow{grid-template-columns:1fr;gap:4px}
       .combatValue{text-align:left}
-      #log{bottom:96px;max-width:calc(100vw - 32px)}
-      #cornerBtns{right:16px;bottom:16px}
-      #contextBar{left:16px;right:16px;bottom:76px;transform:none;min-width:0;max-width:none}
+      #log{bottom:68px;left:10px;max-width:calc(100vw - 70px)}
+      .le{font-size:max(9px, calc(9px * var(--ui-scale)));padding:5px 7px;margin-bottom:3px}
+      #cornerBtns{right:10px;bottom:10px;gap:6px}
+      #contextBar{left:10px;right:10px;bottom:56px;transform:none;min-width:0;max-width:none;padding:6px 10px}
+      #contextTitle{font-size:max(9px, calc(9px * var(--ui-scale)))}
+      #contextDetail{font-size:max(9px, calc(9px * var(--ui-scale)))}
       #inspectBody{grid-template-columns:1fr}
+      #pmenu,#cmenu,#tmenu{min-width:min(96vw,520px);padding:16px}
+      .mb{min-height:44px;padding:12px 14px}
+      #archivePanel{width:min(96vw,720px)}
+      #gameover{width:min(96vw,520px)}
+      #inspectPanel{width:min(96vw,560px)}
+      #settingsPanel{width:min(96vw,520px)}
+      .settingRow input[type="range"],.settingRow input[type="number"]{width:120px}
     }
     body.reduced-motion .le,
     body.reduced-motion .le.out,
@@ -157,8 +176,9 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;posit
     <div class="sc r">
       <div>⭐ FAME <span id="fEl">0</span></div>
       <div>💀 KILLS <span id="kEl">0</span></div>
-      <div>⚓ FLEET <span id="flEl">1</span></div>
-      <div class="statEra">ERA <span id="eraEl">I</span></div>
+      <div>⚓ FLEET <span id="flEl">1</span> · <span id="foEl">LINE ABREAST</span></div>
+      <div class="statEra">ERA <span id="eraEl">I</span> · <span id="moraleEl">CONTENT</span></div>
+      <div class="statSub">🎖 <span id="specEl">0</span> SPEC</div>
     </div>
   </div>
 </div>

@@ -10,6 +10,9 @@ import { resolveEnemyAction, resolvePortAttack } from './game-action-resolvers';
 import { buyDrinksForTown, demandTribute, serviceProfile } from '../sim/state/port-actions';
 import { shareLootAndPassRum } from '../sim/state/crew-chaos';
 import { tryBreakSirenFog } from '../sim/state/encounters';
+import { fleetOrderLabel } from '../sim/state/fleet';
+import { hireSpecialist } from '../sim/state/specialists';
+import type { FleetOrder, CrewSpecialists } from '../core/types';
 
 export { getAvailableActions } from './game-actions-available';
 
@@ -123,6 +126,23 @@ export function executeCommand(
     return { ok: !msg.includes('No plunder'), msg };
   }
 
+  if (name === 'fleet_order') {
+    const order = String(cmd['order'] ?? 'line_abreast') as FleetOrder;
+    if (!['line_abreast', 'attack_line', 'screen'].includes(order)) return { ok: false, msg: 'Invalid order' };
+    p.fleetOrder = order;
+    const label = fleetOrderLabel(order);
+    addLog('Fleet order: ' + label, 'b');
+    return { ok: true, msg: 'Fleet order set to ' + label };
+  }
+  if (name === 'hire_specialist') {
+    if (!np || np.port.rel !== 'friendly') return { ok: false, msg: 'No friendly port nearby' };
+    const kind = String(cmd['kind'] ?? '') as keyof CrewSpecialists;
+    const cost = Number(cmd['cost'] ?? 100);
+    if (!['gunners', 'marines', 'surgeons', 'navigators'].includes(kind)) return { ok: false, msg: 'Unknown specialist' };
+    const msg = hireSpecialist(p, kind, cost);
+    addLog(msg, msg.includes('Hired') ? 'g' : 'r');
+    return { ok: msg.includes('Hired'), msg };
+  }
   if (name === 'loot' || name === 'capture' || name === 'board' || name === 'burn') {
     const en = findEnemy(gs, Number(cmd['enemyIndex'] ?? -1));
     if (!en) return { ok: false, msg: 'No disabled enemy at that index nearby' };

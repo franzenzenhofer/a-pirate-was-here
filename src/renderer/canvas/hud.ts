@@ -2,9 +2,13 @@ import { displaySailingFlag, displayShipFlag, displayShipName, shipNationStyle }
 import type { PlayerShip } from '../../core/types';
 import { windDirStr, windStrBar } from '../../sim/nav/wind';
 import type { WindState } from '../../sim/nav/wind';
+import { fleetOrderLabel } from '../../sim/state/fleet';
+import { moraleLabel } from '../../sim/state/morale';
+import { totalSpecialists } from '../../sim/state/specialists';
+import type { MoraleState } from '../../sim/state/morale';
 
 /** Update all HUD DOM elements */
-export function updateHUD(player: PlayerShip, era: number, wind: WindState): void {
+export function updateHUD(player: PlayerShip, era: number, wind: WindState, morale: MoraleState): void {
   setText('snEl', displayShipName(player));
   setText('sfBadge', displayShipFlag(player));
   setText('sfEl', displaySailingFlag(player));
@@ -18,6 +22,9 @@ export function updateHUD(player: PlayerShip, era: number, wind: WindState): voi
   setText('eraEl', ['I', 'II', 'III', 'IV', 'V'][Math.min(era, 4)] ?? 'I');
   setText('wdEl', windDirStr(wind.angle));
   setText('wsEl', windStrBar(wind.strength));
+  setText('moraleEl', moraleLabel(morale.value));
+  setText('foEl', fleetOrderLabel(player.fleetOrder));
+  setText('specEl', String(totalSpecialists(player.specialists)));
   applyFlagBadge(player);
 
   updateHealthBar(player.hp, player.maxHp);

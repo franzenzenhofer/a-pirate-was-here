@@ -5,6 +5,9 @@ import type { GameState } from '../sim/state/game-state';
 import { selectCombatTarget } from './combat-hud';
 import { nearestPort } from './game-actions-available';
 import { crewWagesPerDay } from '../config/economy';
+import { fleetOrderLabel } from '../sim/state/fleet';
+import { moraleLabel } from '../sim/state/morale';
+import { specialistWagesPerDay, totalSpecialists } from '../sim/state/specialists';
 
 export function bindInspectPanel(onToggle: () => void): void {
   window.addEventListener('keydown', (event) => {
@@ -60,7 +63,10 @@ function buildPlayerMetrics(gs: GameState): string[] {
     metric('CREW', `${gs.player.crew}`),
     metric('GOLD', `${gs.player.gold}`),
     metric('UNSHARED', `${gs.player.unsharedGold}`),
-    metric('WAGES / DAY', `${crewWagesPerDay(gs.player.crew)}`),
+    metric('WAGES / DAY', `${crewWagesPerDay(gs.player.crew) + specialistWagesPerDay(gs.player.specialists)}`),
+    metric('MORALE', `${moraleLabel(gs.morale.value)} (${Math.round(gs.morale.value)})`),
+    metric('FLEET ORDER', fleetOrderLabel(gs.player.fleetOrder)),
+    metric('SPECIALISTS', `${totalSpecialists(gs.player.specialists)} (G${gs.player.specialists.gunners} M${gs.player.specialists.marines} S${gs.player.specialists.surgeons} N${gs.player.specialists.navigators})`),
     metric('CANNONS', `${gs.player.cn}`),
     metric('RELOAD', `${(gs.player.reloadT / 1000).toFixed(1)}s`),
     metric('RANGE', `${gs.player.rng.toFixed(1)}`),

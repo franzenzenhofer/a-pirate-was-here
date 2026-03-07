@@ -9,11 +9,12 @@ import { fireBroadside } from '../sim/combat/naval';
 import { createExplosion } from '../sim/combat/damage';
 import { windModifier } from '../sim/nav/wind';
 import { addLog } from '../renderer/canvas/log';
-import { fleetDamageBonus } from '../sim/state/fleet';
+import { fleetDamageBonus, fleetSpeedBonus } from '../sim/state/fleet';
 import { collectNearbyPickups } from '../sim/state/pickups';
 import { applyCombatBuff, registerSeaLoot } from '../sim/state/crew-chaos';
 import { nextRandom } from '../sim/state/random';
 import { hasGoodBroadside, preferredBroadsidePoint, selectBestBroadsideTarget } from '../sim/combat/shot-selection';
+import { specialistHpRegen, specialistReloadMultiplier, specialistSpeedBonus, specialistWagesPerDay } from '../sim/state/specialists';
 
 let windWarningCooldown = 0;
 
@@ -26,17 +27,22 @@ export function updatePlayer(gs: GameState, cam: Camera, dt: number): void {
   if (player.dayT > DAY_DURATION) {
     player.dayT = 0;
     player.day++;
-    const wages = crewWagesPerDay(player.crew);
+    const wages = crewWagesPerDay(player.crew) + specialistWagesPerDay(player.specialists);
     if (player.gold >= wages) player.gold -= wages;
     else {
       player.crew = Math.max(1, player.crew - 2);
       addLog('Crew deserts — no pay!', 'r');
     }
+    const regen = specialistHpRegen(player.specialists, gs.morale.value);
+    if (regen > 0 && player.hp < player.maxHp) {
+      player.hp = Math.min(player.maxHp, player.hp + regen);
+    }
   }
 
   if (player.targetX !== null && player.targetY !== null) {
     const stats = SHIP_TYPES[player.tk];
-    const buffed = applyCombatBuff(stats?.spd ?? 1.0, player.rl, player.acc, player);
+    const navBonus = specialistSpeedBonus(player.specialists, gs.morale.value) * fleetSpeedBonus(player);
+    const buffed = applyCombatBuff((stats?.spd ?? 1.0) * navBonus, player.rl, player.acc, player);
     const moved = moveShip(
       player,
       player.targetX,
@@ -86,7 +92,8 @@ function autoFirePlayer(gs: GameState): void {
     return;
   }
   const damage = 2 + fleetDamageBonus(player);
-  const reload = applyCombatBuff(player.bspd, player.rl, player.acc, player).reload;
+  const reloadMul = specialistReloadMultiplier(player.specialists, gs.morale.value);
+  const reload = Math.round(applyCombatBuff(player.bspd, player.rl, player.acc, player).reload * reloadMul);
   gs.cannonballs.push(...fireBroadside(
     player.x,
     player.y,

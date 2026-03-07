@@ -128,7 +128,7 @@ startLoop((dt) => {
     syncAmbientAudio(gs, dt);
     applyScreenShake(canvas, dt, gs.settings.reducedMotion);
     if (frameN % 4 === 0) {
-      updateHUD(gs.player, gs.era, gs.wind);
+      updateHUD(gs.player, gs.era, gs.wind, gs.morale);
       if (mmCtx && gs.settings.minimapMode !== 'hidden') drawMinimap(mmCtx, gs.ports, gs.enemies, gs.player, cam);
       drawCompass(compCtx, gs.wind);
       syncSessionUI(gs);

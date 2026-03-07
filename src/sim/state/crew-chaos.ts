@@ -5,6 +5,7 @@ import { emitEvent } from './events';
 import { createEnemy } from './spawn';
 import { nextRandom, randomChance, randomFloat, randomInt } from './random';
 import { spawnCargoPickup } from './pickups';
+import { loseSpecialistsOnMutiny } from './specialists';
 
 export const FEVER_TRIGGER_GOLD = 180;
 export const FEVER_DURATION = 120_000;
@@ -109,6 +110,7 @@ function triggerMutiny(gs: GameState): void {
   player.gold = Math.max(0, player.gold - stolenGold);
   player.mutinyGold += stolenGold;
   player.unsharedGold = 0;
+  loseSpecialistsOnMutiny(player.specialists, 0.5);
   emitEvent(gs, { kind: 'log', msg: `☠️ MUTINY! ${deserters} crew steal ${stolenGold}g and peel away in your own colors!`, tone: 'r' });
   emitEvent(gs, { kind: 'screen_shake', msg: 'mutiny' });
 

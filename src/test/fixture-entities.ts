@@ -56,6 +56,8 @@ export function createTestPlayer(overrides: Partial<PlayerShip> = {}): PlayerShi
     fleet: [],
     cargo: [],
     upgrades: { hull: 0, sails: 0, range: 0 },
+    fleetOrder: 'line_abreast',
+    specialists: { gunners: 0, marines: 0, surgeons: 0, navigators: 0 },
     ...overrides,
   };
 }

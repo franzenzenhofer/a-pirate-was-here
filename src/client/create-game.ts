@@ -9,6 +9,7 @@ import { generateWorld } from '../sim/world/gen';
 import { placePorts } from '../sim/world/ports';
 import { findPlayerSpawn } from './player-spawn';
 import { mkRawRng } from '../core/rng';
+import { createMorale } from '../sim/state/morale';
 
 export function createInitialGame(seed: number, screenW: number, screenH: number): {
   cam: Camera;
@@ -41,7 +42,7 @@ export function createInitialGame(seed: number, screenW: number, screenH: number
         musicAudio: 0.6,
         preferredSeed: seed,
       },
-      activeQuest: null, activeEvent: null,
+      activeQuest: null, activeEvent: null, morale: createMorale(),
     },
   };
 }
@@ -62,5 +63,7 @@ function createPlayer(seed: number, tiles: Uint8Array, ports: GameState['ports']
     gold: 500, unsharedGold: 0, crew: 80, fame: 0, kills: 0, day: 1, dayT: 0, feverT: 0, hypedT: 0, deafenedT: 0, mutinyGold: 0, ramBonus: 0,
     fleet: [] as { tk: string }[], cargo: [] as { good: string; qty: number; buyPrice: number }[],
     upgrades: { hull: 0, sails: 0, range: 0 },
+    fleetOrder: 'line_abreast' as const,
+    specialists: { gunners: 0, marines: 0, surgeons: 0, navigators: 0 },
   };
 }

@@ -6,6 +6,22 @@
 
 An open-world Caribbean pirate adventure with procedural world generation, naval combat, trading, crew management, and exploration. Mobile-first, pixel-art aesthetic, deeply strategic, endlessly replayable. The kind of game you lose weekends to.
 
+## GOLDEN GOAL: MOBILE FIRST
+
+This is a **mobile-first game**. Every feature, every UI element, every interaction MUST work perfectly on mobile phones. Desktop is secondary.
+
+**Mobile-first rules:**
+- All touch targets >= 44px (Apple HIG minimum)
+- All text readable at 320px viewport width (iPhone SE)
+- No hover-dependent interactions
+- Menus must fit on screen without scrolling on 667px height
+- Canvas must fill viewport with no overflow/scroll
+- Touch events are primary, mouse is fallback
+- Test every change on mobile viewport before committing
+- HUD elements must not overlap on small screens
+- Buttons must be thumb-reachable (bottom half of screen preferred)
+- Font size minimum 12px for body text, 10px for labels
+
 **Reference prototype**: `briefing.html` — a working single-file proof of concept (DO NOT MODIFY). All mechanics proven there get rebuilt properly in the modular TypeScript codebase.
 
 ## Stack

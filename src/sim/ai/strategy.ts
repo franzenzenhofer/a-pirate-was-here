@@ -33,18 +33,21 @@ export function updateAIState(
 
   const dpP = Math.hypot(en.x - player.x, en.y - player.y);
   const canSeePlayer = dpP < VISION_RANGE;
-  const shouldFlee = en.hp / en.maxHp < en.beh.flee;
+  const p = en.personality;
+  const fleeThreshold = p ? en.beh.flee * (1 + p.caution * 0.4 - p.aggression * 0.2) : en.beh.flee;
+  const shouldFlee = en.hp / en.maxHp < fleeThreshold;
+  const aggroMul = p ? 1 + p.aggression * 0.6 : 1;
 
   en.stTimer += dt;
 
   if (shouldFlee && canSeePlayer) {
-    transition(en, 'FLEE', 'hp=' + ~~(en.hp / en.maxHp * 100) + '% < flee=' + ~~(en.beh.flee * 100) + '%');
+    transition(en, 'FLEE', 'hp=' + ~~(en.hp / en.maxHp * 100) + '% < flee=' + ~~(fleeThreshold * 100) + '%');
   } else if (shouldFlee && en.state === 'FLEE' && !canSeePlayer) {
     transition(en, 'WANDER', 'lost sight while fleeing');
   } else if (
     canSeePlayer
     && dpP < 12
-    && (en.beh.aggro > 0 && randomChance(gs, en.beh.aggro * 0.002 * dt) || shouldPiratePressTarget(en.role, player, dpP))
+    && (en.beh.aggro > 0 && randomChance(gs, en.beh.aggro * aggroMul * 0.002 * dt) || shouldPiratePressTarget(en.role, player, dpP))
   ) {
     transition(en, 'CHASE', 'spotted player d=' + ~~dpP + ' aggro=' + ~~(en.beh.aggro * 100) + '%');
     en.stTimer = 0;
@@ -73,7 +76,7 @@ export function updateAIState(
   if (canSeePlayer && en.role === 'MERCHANT' && shouldMerchantPanic(player, en, dpP)) {
     en.intimidated = true;
     en.cargoDropDone = true;
-    en.state = 'FLEE';
+    transition(en, 'FLEE', 'merchant panic d=' + ~~dpP);
     spawnCargoPickup(gs, en.x + 0.5, en.y, Math.max(60, Math.round(en.loot * 0.45)), en.name ?? en.tk);
     emitEvent(gs, { kind: 'log', msg: `${en.name ?? en.tk} panics and dumps cargo overboard!`, tone: 'o' });
   }

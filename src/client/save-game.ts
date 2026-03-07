@@ -1,4 +1,5 @@
 import type { GameState } from '../sim/state/game-state';
+import { createMorale } from '../sim/state/morale';
 
 const SAVE_KEY = 'pirates-save-v1';
 const SKIP_LOAD_ONCE_KEY = 'pirates-skip-load-once';
@@ -66,6 +67,9 @@ export function applySnapshot(gs: GameState, saved: SavedGame): void {
   };
   gs.activeQuest = (saved.activeQuest as GameState['activeQuest']) ?? null;
   gs.activeEvent = (saved.activeEvent as GameState['activeEvent']) ?? null;
+  gs.morale = (saved.morale as GameState['morale']) ?? createMorale();
+  if (!gs.player.fleetOrder) gs.player.fleetOrder = 'line_abreast';
+  if (!gs.player.specialists) gs.player.specialists = { gunners: 0, marines: 0, surgeons: 0, navigators: 0 };
 }
 
 export function saveToStorage(gs: GameState): string {

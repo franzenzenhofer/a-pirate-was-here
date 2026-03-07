@@ -13,6 +13,7 @@ import type {
 } from '../../core/campaign-types';
 import type { WindState } from '../nav/wind';
 import type { WorldData } from '../world/gen';
+import type { MoraleState } from './morale';
 
 /** Central game state — all mutable game data in one place */
 export interface GameState {
@@ -49,4 +50,5 @@ export interface GameState {
   settings: GameSettings;
   activeQuest: QuestState | null;
   activeEvent: WorldEventState | null;
+  morale: MoraleState;
 }

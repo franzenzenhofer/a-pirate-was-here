@@ -1,5 +1,6 @@
 import type { PlayerShip, EnemyShip } from '../../core/types';
 import { fleetBoardingBonus } from '../state/fleet';
+import { specialistBoardingBonus } from '../state/specialists';
 
 export interface BoardingResult {
   success: boolean;
@@ -19,7 +20,8 @@ export function resolveBoarding(
   randomValue: () => number = Math.random,
 ): BoardingResult {
   // Player strength: crew count * (hp ratio) * random factor
-  const playerStr = (player.crew + fleetBoardingBonus(player)) * (player.hp / player.maxHp) * (0.7 + randomValue() * 0.6);
+  const marineBonus = specialistBoardingBonus(player.specialists, 75);
+  const playerStr = (player.crew + fleetBoardingBonus(player) + marineBonus) * (player.hp / player.maxHp) * (0.7 + randomValue() * 0.6);
 
   // Enemy strength: estimated crew (based on ship size)
   const enemyCrew = estimateCrew(enemy.tk);

@@ -1,6 +1,8 @@
 import { displayShipName } from '../core/ship-identity';
 import { hasGoodBroadside } from '../sim/combat/shot-selection';
 import { serviceProfile } from '../sim/state/port-actions';
+import { fleetOrderLabel } from '../sim/state/fleet';
+import { moraleLabel } from '../sim/state/morale';
 import { assessPortRaid } from '../sim/state/progression';
 import type { GameState } from '../sim/state/game-state';
 import { createReloadMeter, selectCombatTarget } from './combat-hud';
@@ -132,7 +134,9 @@ function getVoyageHint(gs: GameState): ContextHint {
   if (gs.activeEvent?.active) {
     return { title: gs.activeEvent.title.toUpperCase(), detail: gs.activeEvent.detail, tone: 'o' };
   }
-  return { title: 'OPEN SEA', detail: 'Chase rumors, raid trade lanes, and use ports to control the pace of your voyage.', tone: 'b' };
+  const order = fleetOrderLabel(gs.player.fleetOrder);
+  const mood = moraleLabel(gs.morale.value);
+  return { title: 'OPEN SEA', detail: `Fleet: ${order} · Crew: ${mood} · Chase rumors, raid trade lanes.`, tone: 'b' };
 }
 
 function describeEnemyIntent(state: string): string {

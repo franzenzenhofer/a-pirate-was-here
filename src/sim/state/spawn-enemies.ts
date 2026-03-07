@@ -70,6 +70,7 @@ export function createEnemy(
     impactT: 0,
     homePort: null,
     attackTarget: null,
+    personality: { aggression: rngValue(), greed: rngValue(), caution: rngValue(), exploration: rngValue() },
   };
 }
 
