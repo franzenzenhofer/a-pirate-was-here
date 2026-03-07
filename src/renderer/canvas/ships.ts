@@ -1,8 +1,10 @@
 import { TILE_PX } from '../../config/world';
-import type { Vec2 } from '../../core/types';
 import { drawNationPennant } from './pennants';
+import { shipHullFor } from './ship-hulls';
+import { drawMonsterShip } from './ship-monsters';
 
-/** Draw a ship sprite — broadside cannons on correct sides, detailed rigging */
+export { drawHealthBar, drawWake } from './ship-effects';
+
 export function drawShip(
   ctx: CanvasRenderingContext2D,
   sx: number, sy: number,
@@ -19,65 +21,25 @@ export function drawShip(
   const isGhost = tk === 'DREAD_GHOST';
   const isMonster = tk === 'MEGALODON' || tk === 'CRAB_LEVIATHAN';
   const isBurning = tk === 'FIRESHIP' || hpRatio < 0.35;
-
-  if (tk === 'MEGALODON') {
-    ctx.globalAlpha = 0.95;
-    ctx.fillStyle = '#7a8998';
-    ctx.beginPath();
-    ctx.moveTo(0, -s * 2.1);
-    ctx.lineTo(-s * 0.6, s * 0.8);
-    ctx.lineTo(0, s * 0.2);
-    ctx.lineTo(s * 0.6, s * 0.8);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#dbe7ef';
-    ctx.fillRect(-1, -s * 1.4, 2, s * 0.9);
+  if (drawMonsterShip(ctx, tk, s)) {
     ctx.restore();
     return;
   }
-
-  if (tk === 'CRAB_LEVIATHAN') {
-    ctx.fillStyle = '#8b6540';
-    ctx.fillRect(-s * 1.1, -s * 0.9, s * 2.2, s * 1.8);
-    ctx.fillStyle = '#d0a76b';
-    ctx.fillRect(-s * 0.5, -s * 0.55, s, s * 0.5);
-    for (const lx of [-1, 1]) {
-      for (const ly of [-0.9, -0.3, 0.3, 0.9]) {
-        ctx.fillRect(lx * s * 1.1, ly * s * 0.6, lx * s * 0.35, s * 0.1);
-      }
-    }
-    ctx.restore();
-    return;
-  }
-
-  // Shadow
   ctx.fillStyle = 'rgba(0,0,0,0.25)';
   ctx.fillRect(-s * hull.w * 0.5 + 1, -s * hull.l * 0.5 + 1, s * hull.w, s * hull.l);
-
-  // Hull
   ctx.globalAlpha = isGhost ? 0.7 : 1;
   ctx.fillStyle = disabled ? '#443322' : col;
   ctx.fillRect(-s * hull.w * 0.5, -s * hull.l * 0.46, s * hull.w, s * hull.l * 0.92);
-
-  // Bow point
   ctx.beginPath();
   ctx.moveTo(0, -s * hull.l * 0.68);
   ctx.lineTo(-s * hull.w * 0.5, -s * hull.l * 0.46);
   ctx.lineTo(s * hull.w * 0.5, -s * hull.l * 0.46);
   ctx.fill();
-
-  // Stern
   ctx.fillRect(-s * hull.w * 0.62, s * hull.l * 0.37, s * hull.w * 1.24, s * 0.46);
-
-  // Waterline
   ctx.fillStyle = 'rgba(0,0,0,0.28)';
   ctx.fillRect(-s * hull.w * 0.5, -s * 0.08, s * hull.w, s * 0.14);
-
-  // Main mast
   ctx.fillStyle = disabled ? '#443322' : '#ccbbaa';
   ctx.fillRect(-1.2, -s * hull.l * 0.64, 2.4, s * hull.l * 0.86);
-
-  // Main sail
   if (!disabled) {
     ctx.fillStyle = 'rgba(255,252,220,0.9)';
     ctx.fillRect(-s * hull.sailW, -s * hull.l * 0.46, s * hull.sailW * 2, s * hull.mainSail);
@@ -87,16 +49,12 @@ export function drawShip(
     ctx.fillStyle = 'rgba(100,80,50,0.45)';
     ctx.fillRect(-s * 0.3, -s * 1.1, s * 0.4, s * 0.65);
   }
-
-  // Topsail (brigantine+)
   if (!['CUTTER', 'SLOOP', 'FIRESHIP'].includes(tk) && !disabled) {
     ctx.fillStyle = 'rgba(240,240,200,0.82)';
     ctx.fillRect(-s * 0.28, -s * hull.l * 0.75, s * 0.56, s * 0.52);
     ctx.fillStyle = '#ccbbaa';
     ctx.fillRect(-0.8, -s * hull.l * 0.84, 1.6, s * 0.42);
   }
-
-  // Second mast (larger ships)
   if (hull.masts > 1 && !disabled) {
     ctx.fillStyle = '#ccbbaa';
     ctx.fillRect(-0.8, s * 0.18, 1.6, s * 1.2);
@@ -110,8 +68,6 @@ export function drawShip(
     ctx.fillStyle = 'rgba(240,240,200,0.7)';
     ctx.fillRect(-s * 0.3, -s * 0.08, s * 0.6, s * 0.42);
   }
-
-  // Broadside cannons
   const nc = hull.guns;
   ctx.fillStyle = '#1a1a1a';
   for (let i = 0; i < nc; i++) {
@@ -127,17 +83,14 @@ export function drawShip(
   if (!disabled) {
     drawNationPennant(ctx, -s * 0.05, -s * hull.l * 0.9, nation, Math.max(0.35, s * 0.12));
   }
-
   if (isGhost && !disabled) {
     ctx.fillStyle = 'rgba(180,255,255,0.24)';
     ctx.fillRect(-s * 1.1, -s * 1.8, s * 2.2, s * 3.2);
   }
-
   if (tk === 'FIRESHIP' && !disabled) {
     ctx.fillStyle = 'rgba(255,180,80,0.28)';
     ctx.fillRect(-s * 0.4, -s * 0.7, s * 0.8, s * 0.9);
   }
-
   if (disabled) {
     ctx.strokeStyle = '#c18a44';
     ctx.lineWidth = 2;
@@ -148,66 +101,15 @@ export function drawShip(
     ctx.lineTo(-s * 0.45, s * 0.35);
     ctx.stroke();
   }
-
   if (!isMonster && hpRatio < 0.68) {
     ctx.fillStyle = 'rgba(35,35,35,0.42)';
     ctx.fillRect(-s * 0.12, -s * 1.2, s * 0.22, s * 0.38);
     ctx.fillRect(s * 0.14, -s * 1.45, s * 0.3, s * 0.46);
   }
-
   if (isBurning && !disabled) {
     ctx.fillStyle = 'rgba(255,190,70,0.45)';
     ctx.fillRect(-s * 0.26, -s * 0.7, s * 0.52, s * 0.52);
   }
-
   ctx.globalAlpha = 1;
   ctx.restore();
-}
-
-function shipHullFor(tk: string): {
-  w: number; l: number; sailW: number; mainSail: number; masts: number; guns: number;
-} {
-  if (tk === 'CUTTER') return { w: 0.72, l: 2.2, sailW: 0.42, mainSail: 0.7, masts: 1, guns: 1 };
-  if (tk === 'SLOOP') return { w: 0.82, l: 2.4, sailW: 0.48, mainSail: 0.82, masts: 1, guns: 1 };
-  if (tk === 'BRIGANTINE') return { w: 0.9, l: 2.62, sailW: 0.54, mainSail: 1.08, masts: 2, guns: 2 };
-  if (tk === 'CORVETTE') return { w: 0.95, l: 2.76, sailW: 0.58, mainSail: 1.14, masts: 2, guns: 3 };
-  if (tk === 'FRIGATE') return { w: 1.04, l: 2.96, sailW: 0.6, mainSail: 1.18, masts: 2, guns: 3 };
-  if (tk === 'FIRESHIP') return { w: 0.86, l: 2.45, sailW: 0.45, mainSail: 0.74, masts: 1, guns: 2 };
-  if (tk === 'GALLEON') return { w: 1.1, l: 3.12, sailW: 0.62, mainSail: 1.22, masts: 3, guns: 4 };
-  if (tk === 'DREAD_GHOST') return { w: 1.05, l: 3.08, sailW: 0.6, mainSail: 1.18, masts: 3, guns: 4 };
-  return { w: 1.12, l: 3.28, sailW: 0.64, mainSail: 1.24, masts: 3, guns: 4 };
-}
-
-/** Draw ship wake trail */
-export function drawWake(
-  ctx: CanvasRenderingContext2D,
-  points: Vec2[],
-  camX: number, camY: number,
-  alpha: number, lineWidth: number,
-): void {
-  if (points.length < 2) return;
-  ctx.strokeStyle = `rgba(160,210,255,${alpha})`;
-  ctx.lineWidth = lineWidth;
-  ctx.beginPath();
-  for (let i = 0; i < points.length; i++) {
-    const p = points[i]!;
-    const wx = (p.x - camX) * TILE_PX;
-    const wy = (p.y - camY) * TILE_PX;
-    if (i === 0) ctx.moveTo(wx, wy);
-    else ctx.lineTo(wx, wy);
-  }
-  ctx.stroke();
-}
-
-/** Draw health bar above a ship */
-export function drawHealthBar(
-  ctx: CanvasRenderingContext2D,
-  sx: number, sy: number,
-  hp: number, maxHp: number,
-): void {
-  const bw = TILE_PX * 1.4;
-  ctx.fillStyle = '#1a1a2a';
-  ctx.fillRect(sx - bw / 2, sy - TILE_PX * 1.45, bw, 3);
-  ctx.fillStyle = hp / maxHp > 0.5 ? '#44ff66' : '#ff4422';
-  ctx.fillRect(sx - bw / 2, sy - TILE_PX * 1.45, bw * hp / maxHp, 3);
 }
