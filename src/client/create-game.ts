@@ -11,15 +11,21 @@ import { findPlayerSpawn } from './player-spawn';
 import { mkRawRng } from '../core/rng';
 import { createMorale } from '../sim/state/morale';
 
+const INITIAL_ENEMY_COUNT = 42;
+const STARTER_SAFE_RADIUS = 16;
+
 export function createInitialGame(seed: number, screenW: number, screenH: number): {
   cam: Camera;
   gs: GameState;
 } {
   const world = generateWorld(seed);
   const ports = placePorts(world.tiles, seed);
-  const enemies = spawnInitialEnemiesWithSeed(world.tiles, 55, seed + 101);
-  const treasures = spawnTreasuresWithSeed(world.tiles, 35, [], seed + 202);
   const player = createPlayer(seed, world.tiles, ports);
+  const enemies = filterStarterWaters(
+    spawnInitialEnemiesWithSeed(world.tiles, INITIAL_ENEMY_COUNT, seed + 101),
+    player,
+  );
+  const treasures = spawnTreasuresWithSeed(world.tiles, 35, [], seed + 202);
   const cam = createCamera(player.x, player.y, screenW, screenH);
 
   return {
@@ -66,4 +72,11 @@ function createPlayer(seed: number, tiles: Uint8Array, ports: GameState['ports']
     fleetOrder: 'line_abreast' as const,
     specialists: { gunners: 0, marines: 0, surgeons: 0, navigators: 0 },
   };
+}
+
+function filterStarterWaters(
+  enemies: GameState['enemies'],
+  player: Pick<GameState['player'], 'x' | 'y'>,
+): GameState['enemies'] {
+  return enemies.filter(enemy => Math.hypot(enemy.x - player.x, enemy.y - player.y) >= STARTER_SAFE_RADIUS);
 }

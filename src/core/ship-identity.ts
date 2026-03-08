@@ -21,6 +21,10 @@ export function displayShipName(ship: Pick<Ship, 'name' | 'tk'>): string {
   return (ship.name ?? ship.tk).toUpperCase();
 }
 
+export function displayShipLabel(ship: Pick<Ship, 'name' | 'tk' | 'flag' | 'nat'>): string {
+  return `${displayShipFlag(ship)} · ${displayShipName(ship)}`;
+}
+
 export function displayShipFlag(ship: Pick<Ship, 'flag' | 'nat'>): string {
   return nationStyle(sailingNation(ship)).code;
 }

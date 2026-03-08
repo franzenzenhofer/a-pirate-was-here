@@ -39,4 +39,14 @@ describe('getContextHint', () => {
     const hint = getContextHint(gs);
     expect(hint?.title).toBe('GOLD FEVER');
   });
+
+  it('shows early voyage guidance for fresh captains', () => {
+    const gs = createTestState({
+      player: createTestPlayer({ fame: 0, day: 1 }),
+      activeQuest: null,
+    });
+    const hint = getContextHint(gs);
+    expect(hint?.title).toBe('SEA LEGS');
+    expect(hint?.detail).toContain('Trade first');
+  });
 });

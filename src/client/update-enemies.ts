@@ -2,6 +2,7 @@ import { SPD_SCALE } from '../config/world';
 import type { EnemyShip } from '../core/types';
 import type { GameState } from '../sim/state/game-state';
 import { moveShip } from '../sim/nav/movement';
+import { trackShipRecovery } from '../sim/nav/recovery';
 import { fireBroadside } from '../sim/combat/naval';
 import { createExplosion } from '../sim/combat/damage';
 import { updateAIState, getAINavTarget, hasReachedPortTarget, shouldFireAtEnemy, shouldFireAtPlayer } from '../sim/ai/strategy';
@@ -10,6 +11,7 @@ import { addLog } from '../renderer/canvas/log';
 import { nextRandom } from '../sim/state/random';
 import { hasGoodBroadside, preferredBroadsidePoint } from '../sim/combat/shot-selection';
 import { updateSpecialEnemy } from '../sim/state/encounters';
+import { clampTargetToSea } from '../sim/nav/collision';
 
 export function updateEnemies(gs: GameState, dt: number): void {
   for (const enemy of gs.enemies) {
@@ -27,6 +29,7 @@ export function updateEnemies(gs: GameState, dt: number): void {
     if (!handledSpecial) updateAIState(gs, enemy, dt, gs.world.tiles);
     const { navX, navY } = getAINavTarget(enemy, gs.player);
     const moved = moveShip(enemy, navX, navY, dt * SPD_SCALE, enemy.bspd, enemy.turnRate, gs.wind.angle, 0.9, gs.world.tiles);
+    trackShipRecovery(enemy, moved, dt, gs.world.tiles);
     if (moved) {
       enemy.wakePoints.unshift({ x: enemy.x, y: enemy.y });
       if (enemy.wakePoints.length > 16) enemy.wakePoints.pop();
@@ -71,8 +74,9 @@ function fireEnemyWeapons(gs: GameState, enemy: EnemyShip): void {
 function fireAtPlayer(gs: GameState, enemy: EnemyShip): void {
   if (!hasGoodBroadside(enemy, gs.player)) {
     const point = preferredBroadsidePoint(enemy, gs.player);
-    enemy.targetX = point.x;
-    enemy.targetY = point.y;
+    const navTarget = clampTargetToSea(gs.world.tiles, enemy.x, enemy.y, point.x, point.y);
+    enemy.targetX = navTarget.x;
+    enemy.targetY = navTarget.y;
     return;
   }
   const volley = fireBroadside(

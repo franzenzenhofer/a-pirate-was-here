@@ -13,6 +13,7 @@ import { tryBreakSirenFog } from '../sim/state/encounters';
 import { fleetOrderLabel } from '../sim/state/fleet';
 import { hireSpecialist } from '../sim/state/specialists';
 import type { FleetOrder, CrewSpecialists } from '../core/types';
+import { clampTargetToSea } from '../sim/nav/collision';
 
 export { getAvailableActions } from './game-actions-available';
 
@@ -23,7 +24,9 @@ export function executeCommand(
   const p = gs.player;
 
   if (name === 'sail') {
-    p.targetX = Number(cmd['x']); p.targetY = Number(cmd['y']);
+    const target = clampTargetToSea(gs.world.tiles, p.x, p.y, Number(cmd['x']), Number(cmd['y']));
+    p.targetX = target.x;
+    p.targetY = target.y;
     return { ok: true, msg: 'Sailing to ' + p.targetX + ',' + p.targetY };
   }
   if (name === 'stop') {

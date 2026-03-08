@@ -7,6 +7,11 @@ import { moraleLabel } from '../../sim/state/morale';
 import { totalSpecialists } from '../../sim/state/specialists';
 import type { MoraleState } from '../../sim/state/morale';
 
+export function updateStatusBadge(player: PlayerShip): void {
+  setText('goldB', String(player.gold));
+  setText('crewB', String(player.crew));
+}
+
 /** Update all HUD DOM elements */
 export function updateHUD(player: PlayerShip, era: number, wind: WindState, morale: MoraleState): void {
   setText('snEl', displayShipName(player));

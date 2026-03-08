@@ -1,8 +1,6 @@
 import { DEFAULT_SEED } from '../config/world';
 import { resize as resizeCam } from '../renderer/camera';
 import { updateHUD } from '../renderer/canvas/hud';
-import { buildMinimapBase, drawMinimap } from '../renderer/canvas/minimap';
-import { drawCompass } from '../renderer/canvas/compass';
 import { openPortMenu } from '../renderer/canvas/menus';
 import { openTradeMenu, openUpgradeMenu } from '../renderer/canvas/port-trade-menus';
 import { addLog } from '../renderer/canvas/log';
@@ -18,12 +16,15 @@ import { startDebugPush } from './debug-push';
 import { setAITransitionLogger } from '../sim/ai/strategy';
 import { setLogHook } from '../renderer/canvas/log';
 import { pushArchive } from '../sim/state/archive';
-import { bindSessionUI, syncSessionUI } from './session-ui';
+import { bindSessionUI, getActiveModal, syncSessionUI } from './session-ui';
+import { computeUIMode } from './ui-mode';
+import { applyLayerVisibility, computeLayerVisibility } from './ui-layers';
 import { sellPlunder } from '../sim/economy/plunder';
 import { consumeRequestedFreshSeed, loadFromStorage, saveToStorage, shouldLoadFromStorage } from './save-game';
 import { createInitialGame } from './create-game';
 import { BUILD_VERSION } from '../generated/build-version';
 import { consumeSimEvents } from './sim-events';
+import { updateMobileUI } from './action-bar';
 import { buyDrinksForTown, demandTribute } from '../sim/state/port-actions';
 import { resolvePortCrewChaos } from '../sim/state/crew-chaos';
 import { nearestRumor } from '../sim/state/encounters';
@@ -34,6 +35,7 @@ import { attackPort } from './port-raid';
 import { createSessionUIActions } from './session-actions';
 import { createCaptureFlow } from './capture-flow';
 import { nextRandom } from '../sim/state/random';
+import { clampTargetToSea } from '../sim/nav/collision';
 const canvas = document.getElementById('c') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
 ctx.imageSmoothingEnabled = false;
@@ -44,13 +46,7 @@ const requestedSeed = consumeRequestedFreshSeed(DEFAULT_SEED);
 const { cam, gs } = createInitialGame(requestedSeed, WP, HP);
 const morale = createMorale();
 console.info('[pirates] build', BUILD_VERSION);
-const minimapCanvas = document.getElementById('minimap') as HTMLCanvasElement | null;
-const mmCtx = minimapCanvas?.getContext('2d') ?? null;
-const compCtx = (document.getElementById('compass') as HTMLCanvasElement).getContext('2d')!;
-if (mmCtx && gs.settings.minimapMode !== 'hidden') buildMinimapBase(mmCtx, gs.world.tiles);
-if (shouldLoadFromStorage() && loadFromStorage(gs) && mmCtx && gs.settings.minimapMode !== 'hidden') {
-  buildMinimapBase(mmCtx, gs.world.tiles);
-}
+if (shouldLoadFromStorage()) loadFromStorage(gs);
 
 let autosaveEnabled = true;
 const setAutosaveEnabled = (enabled: boolean): void => { autosaveEnabled = enabled; };
@@ -93,7 +89,9 @@ setupInputListeners(canvas, input, cam, (result) => {
       return;
     }
   }
-  gs.player.targetX = result.wx; gs.player.targetY = result.wy;
+  const target = clampTargetToSea(gs.world.tiles, gs.player.x, gs.player.y, result.wx, result.wy);
+  gs.player.targetX = target.x;
+  gs.player.targetY = target.y;
 });
 const keys = createKeyState();
 setupKeyboardListeners(keys);
@@ -117,7 +115,7 @@ let frameN = 0;
 startLoop((dt) => {
   frameN++;
   updatePerfStats();
-  if (!gs.gameOver) applyKeyboardNav(keys, gs.player, cam);
+  if (!gs.gameOver) applyKeyboardNav(keys, gs.player, cam, gs.world.tiles);
   const moraleMsg = updateMorale(morale, gs.player, dt, () => nextRandom(gs));
   if (moraleMsg) addLog(moraleMsg, 'r');
   maybeOpenCaptureMenu();
@@ -128,17 +126,14 @@ startLoop((dt) => {
     syncAmbientAudio(gs, dt);
     applyScreenShake(canvas, dt, gs.settings.reducedMotion);
     if (frameN % 4 === 0) {
+      const mode = computeUIMode(gs, getActiveModal());
       updateHUD(gs.player, gs.era, gs.wind, gs.morale);
-      if (mmCtx && gs.settings.minimapMode !== 'hidden') drawMinimap(mmCtx, gs.ports, gs.enemies, gs.player, cam);
-      drawCompass(compCtx, gs.wind);
       syncSessionUI(gs);
+      updateMobileUI(mode, gs);
+      applyLayerVisibility(computeLayerVisibility(mode));
     }
   });
 });
 
-addLog('⚓ PIRATES! THE CARIBBEAN', 'b');
-addLog('TAP or WASD to SET SAIL', 'b');
-addLog('BROADSIDE CANNONS AUTO-FIRE 🔫', 'g');
-setTimeout(() => addLog('TAP PORTS TO TRADE & UPGRADE', 'b'), 2500);
-setTimeout(() => addLog('💰 SEEK TREASURE ON BEACHES!', 'g'), 5000);
-setTimeout(() => addLog('🍻 SHARE LOOT AT SEA BEFORE FEVER TURNS TO MUTINY', 'o'), 7500);
+addLog('⚓ TAP to SAIL · PORTS to TRADE', 'b');
+addLog('CANNONS AUTO-FIRE · SHARE LOOT', 'g');

@@ -1,5 +1,5 @@
 import type { Ship } from '../../core/types';
-import { isSail } from '../world/gen';
+import { findNearestSailablePoint, isSailablePoint } from './collision';
 
 export function trackShipRecovery(
   ship: Pick<Ship, 'x' | 'y' | 'angle' | 'speed' | 'targetX' | 'targetY' | 'stuckT' | 'lastSafeX' | 'lastSafeY'> & {
@@ -32,7 +32,7 @@ export function trackShipRecovery(
   ship.stuckT = (ship.stuckT ?? 0) + dt;
   if (ship.stuckT < 900) return;
 
-  const escapeTarget = findEscapeTarget(tiles, ship.x, ship.y);
+  const escapeTarget = findNearestSailablePoint(tiles, ship.x, ship.y);
   if (escapeTarget) {
     ship.targetX = escapeTarget.x;
     ship.targetY = escapeTarget.y;
@@ -42,7 +42,7 @@ export function trackShipRecovery(
 
   if (ship.stuckT < 1800) return;
   if (ship.lastSafeX === undefined || ship.lastSafeY === undefined) return;
-  if (!isSail(tiles, ~~ship.lastSafeX, ~~ship.lastSafeY)) return;
+  if (!isSailablePoint(tiles, ship.lastSafeX, ship.lastSafeY)) return;
 
   ship.x = ship.lastSafeX;
   ship.y = ship.lastSafeY;
@@ -50,26 +50,4 @@ export function trackShipRecovery(
   ship.targetY = null;
   ship.speed = 0;
   ship.stuckT = 0;
-}
-
-function findEscapeTarget(tiles: Uint8Array, x: number, y: number): { x: number; y: number } | null {
-  for (let radius = 1; radius <= 4; radius++) {
-    for (const [dx, dy] of escapeOffsets(radius)) {
-      const tx = ~~x + dx;
-      const ty = ~~y + dy;
-      if (isSail(tiles, tx, ty)) return { x: tx + 0.5, y: ty + 0.5 };
-    }
-  }
-  return null;
-}
-
-function escapeOffsets(radius: number): Array<[number, number]> {
-  const offsets: Array<[number, number]> = [];
-  for (let dy = -radius; dy <= radius; dy++) {
-    for (let dx = -radius; dx <= radius; dx++) {
-      if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
-      offsets.push([dx, dy]);
-    }
-  }
-  return offsets;
 }

@@ -20,6 +20,8 @@ export function bindInspectPanel(onToggle: () => void): void {
   });
   const button = document.getElementById('inspectBtn');
   if (button) button.onclick = () => onToggle();
+  const crewButton = document.getElementById('crewBtn');
+  if (crewButton) crewButton.onclick = () => onToggle();
   const close = document.getElementById('inspectClose');
   if (close) close.onclick = () => setInspectOpen(false);
 }

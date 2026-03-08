@@ -46,11 +46,13 @@ function updateEra(gs: GameState): void {
 
 function updateSpawns(gs: GameState, dt: number): void {
   gs.spawnTimer += dt;
-  const interval = Math.max(8000, SPAWN_INTERVAL - gs.era * 4000);
+  const rookieWaters = gs.player.day <= 4 && gs.player.fame < 40;
+  const interval = Math.max(9000, SPAWN_INTERVAL - gs.era * 4000 + (rookieWaters ? 9000 : 0));
   if (gs.spawnTimer > interval) {
     gs.spawnTimer = 0;
     const count = gs.enemies.filter(e => !e.sunk && !e.captured).length;
-    if (count < 80 + gs.era * 10) {
+    const cap = rookieWaters ? 58 + gs.era * 6 : 80 + gs.era * 10;
+    if (count < cap) {
       const en = spawnEdgeEnemyWithRng(gs.world.tiles, gs.era, undefined, () => nextRandom(gs));
       if (en) gs.enemies.push(en);
       if (gs.era >= 2 && nextRandom(gs) < 0.5) {
@@ -79,6 +81,7 @@ function updateTreasureRespawn(gs: GameState, dt: number): void {
 }
 
 function updatePortWars(gs: GameState, dt: number): void {
+  if (gs.player.day <= 4 && gs.player.fame < 35) return;
   gs.portWarTimer += dt;
   if (gs.portWarTimer < PORT_WAR_CHECK) return;
   gs.portWarTimer = 0;

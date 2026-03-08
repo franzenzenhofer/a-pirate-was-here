@@ -129,10 +129,21 @@ function getCrewHint(gs: GameState): ContextHint | null {
 
 function getVoyageHint(gs: GameState): ContextHint {
   if (gs.activeQuest && !gs.activeQuest.completed) {
-    return { title: gs.activeQuest.title.toUpperCase(), detail: `${gs.activeQuest.detail} · ${gs.activeQuest.progress}/${gs.activeQuest.goal}`, tone: 'b' };
+    return {
+      title: gs.activeQuest.title.toUpperCase(),
+      detail: `${gs.activeQuest.detail} · ${gs.activeQuest.progress}/${gs.activeQuest.goal} · reward ${gs.activeQuest.rewardGold}g / ${gs.activeQuest.rewardFame} fame`,
+      tone: 'b',
+    };
   }
   if (gs.activeEvent?.active) {
     return { title: gs.activeEvent.title.toUpperCase(), detail: gs.activeEvent.detail, tone: 'o' };
+  }
+  if (gs.player.fame < 25 && gs.player.day <= 4) {
+    return {
+      title: 'SEA LEGS',
+      detail: 'Trade first, then cripple small ships and tap them to claim prizes. Auto-fire works when your broadside is lined up.',
+      tone: 'b',
+    };
   }
   const order = fleetOrderLabel(gs.player.fleetOrder);
   const mood = moraleLabel(gs.morale.value);

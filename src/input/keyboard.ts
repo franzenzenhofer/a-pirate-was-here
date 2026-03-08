@@ -2,6 +2,7 @@ import type { PlayerShip } from '../core/types';
 import type { Camera } from '../renderer/camera';
 import { clampCamera } from '../renderer/camera';
 import { TILE_PX } from '../config/world';
+import { clampTargetToSea } from '../sim/nav/collision';
 
 export interface KeyState {
   up: boolean;
@@ -34,6 +35,7 @@ export function applyKeyboardNav(
   keys: KeyState,
   player: PlayerShip,
   cam: Camera,
+  tiles?: Uint8Array,
 ): void {
   if (!keys.up && !keys.down && !keys.left && !keys.right) return;
 
@@ -48,8 +50,13 @@ export function applyKeyboardNav(
   // Set target 8 tiles ahead in pressed direction
   const dist = 8;
   const angle = Math.atan2(dy, dx);
-  player.targetX = player.x + Math.cos(angle) * dist;
-  player.targetY = player.y + Math.sin(angle) * dist;
+  const desiredX = player.x + Math.cos(angle) * dist;
+  const desiredY = player.y + Math.sin(angle) * dist;
+  const target = tiles
+    ? clampTargetToSea(tiles, player.x, player.y, desiredX, desiredY)
+    : { x: desiredX, y: desiredY };
+  player.targetX = target.x;
+  player.targetY = target.y;
 
   // Camera follows
   const targetCamX = player.x - cam.screenW / TILE_PX / 2;

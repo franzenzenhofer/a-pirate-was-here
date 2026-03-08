@@ -1,7 +1,7 @@
 export type LogFn = (msg: string, type?: string) => void;
 
-const LOG_MAX = 6;
-const LOG_DURATION = 5000;
+const LOG_MAX = 3;
+const LOG_DURATION = 3000;
 
 const entries: HTMLDivElement[] = [];
 

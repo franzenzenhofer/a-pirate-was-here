@@ -8,15 +8,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 :root{
   --ui-scale:1;
-  --ui-font-sm:max(16px, calc(16px * var(--ui-scale)));
-  --ui-font-md:max(20px, calc(20px * var(--ui-scale)));
-  --ui-font-lg:max(24px, calc(24px * var(--ui-scale)));
-  --ui-font-xl:max(32px, calc(32px * var(--ui-scale)));
+  --ui-font-sm:max(10px, calc(10px * var(--ui-scale)));
+  --ui-font-md:max(12px, calc(12px * var(--ui-scale)));
+  --ui-font-lg:max(14px, calc(14px * var(--ui-scale)));
+  --ui-font-xl:max(18px, calc(18px * var(--ui-scale)));
 }
 *{margin:0;padding:0;box-sizing:border-box;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 html,body{width:100%;height:100%;overflow:hidden;background:#0a0e1a;font-family:'Press Start 2P',monospace;font-size:16px}
 canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;position:absolute;top:0;left:0}
-#hud{position:fixed;top:0;left:0;right:0;z-index:30;pointer-events:none}
+#ui-layer{position:fixed;inset:0;z-index:30;pointer-events:none}
+#ui-layer>*{pointer-events:none}
+button,input,select,.mb,.mc,.tb{pointer-events:auto}
 #topbar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:flex-start;padding:12px 16px 14px;background:linear-gradient(#000e,#0008);border-bottom:1px solid #2244aa}
 .sc{color:#f0c040;font-size:var(--ui-font-sm);line-height:1.7;min-width:0}
 .sc.r{text-align:right}
@@ -25,8 +27,8 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;posit
 .hs{width:12px;height:12px;border:2px solid #446;background:#113}
 .hs.f{background:#22dd44;border-color:#44ff66}
 .hs.lo{background:#dd4422;border-color:#ff6644}
-#minimap{display:none;position:fixed;left:auto;bottom:8px;right:8px;border:2px solid #334477;background:#000;z-index:30;pointer-events:none}
-#log{position:fixed;bottom:16px;left:16px;z-index:30;pointer-events:none;max-width:min(42vw,420px)}
+#minimap{position:fixed;left:auto;bottom:8px;right:8px;border:2px solid #334477;background:#000;z-index:30;pointer-events:none}
+#log{position:fixed;bottom:16px;left:8px;z-index:30;pointer-events:none;max-width:min(60vw,320px)}
 .le{background:rgba(0,0,0,0.88);border-left:3px solid #f0c040;color:#f0c040;font-size:var(--ui-font-sm);padding:8px 10px;margin-bottom:6px;line-height:1.5;transform:translateX(-18px);opacity:0;animation:toastIn 180ms ease-out forwards}
 .le.r{border-color:#ff4444;color:#ff8888}
 .le.g{border-color:#44ff88;color:#88ffaa}
@@ -35,33 +37,35 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;posit
 .le.out{animation:toastOut 220ms ease-in forwards}
 @keyframes toastIn{from{transform:translateX(-18px);opacity:0}to{transform:translateX(0);opacity:1}}
 @keyframes toastOut{from{transform:translateX(0);opacity:1}to{transform:translateX(18px);opacity:0}}
-#pmenu,#cmenu,#tmenu{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#060d1a;border:2px solid #5566aa;padding:24px;z-index:40;min-width:min(92vw,520px);display:none;box-shadow:0 0 20px #0008;max-height:85vh;overflow-y:auto}
-#pmenu h3,#cmenu h3,#tmenu h3{color:#f0c040;font-size:var(--ui-font-md);margin-bottom:18px;text-align:center;border-bottom:1px solid #334;padding-bottom:10px}
-.mb{display:block;width:100%;padding:12px 14px;font-family:inherit;font-size:var(--ui-font-sm);margin-bottom:10px;cursor:pointer;border:1px solid;background:transparent;text-align:left;line-height:1.5;pointer-events:all}
+#pmenu,#cmenu,#tmenu{position:fixed;left:4px;right:4px;bottom:4px;background:#060d1a;border:2px solid #5566aa;padding:12px;z-index:40;display:none;box-shadow:0 0 20px #0008;max-height:85vh;overflow-y:auto;pointer-events:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch}
+#pmenu h3,#cmenu h3,#tmenu h3{color:#f0c040;font-size:var(--ui-font-sm);margin-bottom:10px;text-align:center;border-bottom:1px solid #334;padding-bottom:8px}
+.mb{display:block;width:100%;padding:12px 14px;font-family:inherit;font-size:var(--ui-font-sm);margin-bottom:10px;cursor:pointer;border:1px solid;background:transparent;text-align:left;line-height:1.5;pointer-events:auto}
 .mb:active{opacity:0.7;transform:scale(0.97)}
 .mb.g{color:#44ff88;border-color:#44ff88}.mb.r{color:#ff5544;border-color:#ff5544}
 .mb.y{color:#f0c040;border-color:#f0c040}.mb.gr{color:#777;border-color:#444}
 .mb.b{color:#44aaff;border-color:#44aaff}
-.mc{color:#555;font-size:var(--ui-font-sm);cursor:pointer;pointer-events:all;text-align:right;margin-top:12px}
+.mc{color:#555;font-size:var(--ui-font-sm);cursor:pointer;pointer-events:auto;text-align:right;margin-top:12px;min-height:44px;display:block;padding:12px}
 #era{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:50;pointer-events:none;display:none;text-align:center}
 #era .etxt{font-size:var(--ui-font-xl);color:#ffcc44;text-shadow:0 0 12px #ff8800,0 0 24px #ff4400;padding:14px 22px;background:rgba(0,0,0,0.85);border:2px solid #ff8800}
 #navpulse{position:fixed;z-index:25;pointer-events:none;display:none;width:24px;height:24px;border:2px solid rgba(255,220,60,0.6);border-radius:50%;animation:pulse 0.6s ease-out}
 @keyframes pulse{0%{transform:translate(-50%,-50%) scale(0.5);opacity:1}100%{transform:translate(-50%,-50%) scale(2.5);opacity:0}}
     #compass{position:fixed;top:142px;left:auto;right:16px;z-index:31;pointer-events:none;width:72px;height:72px}
     #cornerBtns{position:fixed;right:16px;bottom:16px;z-index:35;display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-    #contextBar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:34;pointer-events:none;background:rgba(4,10,20,0.92);border:1px solid #334477;padding:10px 14px;min-width:min(50vw,640px);max-width:min(70vw,820px);text-align:center;box-shadow:0 0 14px #0008}
+    #bottomZone{position:fixed;bottom:56px;left:0;right:0;z-index:34;pointer-events:none}
+    #contextBar{background:rgba(4,10,20,0.92);border:1px solid #334477;padding:10px 14px;min-width:min(50vw,640px);max-width:min(70vw,820px);text-align:center;box-shadow:0 0 14px #0008;margin:0 auto;pointer-events:none}
     #contextBar[data-tone="g"]{border-color:#2f8d5a}
     #contextBar[data-tone="r"]{border-color:#9b3f3f}
     #contextBar[data-tone="o"]{border-color:#9c7440}
     #contextBar[data-tone="b"]{border-color:#4466aa}
     #contextTitle{color:#f0c040;font-size:var(--ui-font-sm);margin-bottom:6px}
     #contextDetail{color:#aac4ff;font-size:var(--ui-font-sm);line-height:1.5}
-    #questBox{position:fixed;left:16px;top:232px;z-index:34;background:rgba(4,10,20,0.88);border:1px solid #334477;padding:10px 12px;min-width:320px}
+    #questBox{position:fixed;left:16px;top:232px;z-index:34;background:rgba(4,10,20,0.88);border:1px solid #334477;padding:10px 12px;min-width:320px;pointer-events:none}
     #questLine,#eventLine,#fleetLine,#milestoneLine{font-size:var(--ui-font-sm);line-height:1.5}
     #questLine{color:#88ffaa}#eventLine{color:#ffcc88}
     #fleetLine{color:#88ccff}
     #milestoneLine{color:#f0c040}
-    #crewBox{position:fixed;right:16px;top:232px;z-index:34;background:rgba(4,10,20,0.88);border:1px solid #334477;padding:10px 12px;min-width:min(34vw,420px)}
+    #crewBox{background:rgba(4,10,20,0.88);border:1px solid #334477;padding:10px 12px;min-width:min(34vw,420px);margin:0 auto;pointer-events:none}
+    #crewBox button{pointer-events:auto}
     #crewTitle,#crewMeta{font-size:var(--ui-font-sm);line-height:1.5}
     #crewTitle{color:#ffcc88}
     #crewMeta{color:#aac4ff;margin-bottom:8px}
@@ -70,8 +74,9 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;posit
     #feverBar{background:linear-gradient(90deg,#ff6655,#ffbb88)}
     #hypeBar{background:linear-gradient(90deg,#44ff88,#bbffdd)}
     #crewActions{display:flex;flex-direction:column;gap:8px}
-    .tb{font-family:inherit;font-size:var(--ui-font-sm);padding:10px 12px;background:#060d1a;border:1px solid #4458aa;color:#88ccff;cursor:pointer}
-    #combatHud{position:fixed;left:50%;bottom:112px;transform:translateX(-50%);z-index:34;display:none;background:rgba(4,10,20,0.92);border:1px solid #334477;padding:12px 14px;min-width:min(70vw,640px);box-shadow:0 0 16px #0008}
+    .tb{font-family:inherit;font-size:var(--ui-font-sm);padding:10px 12px;background:#060d1a;border:1px solid #4458aa;color:#88ccff;cursor:pointer;pointer-events:auto}
+    #combatHud{background:rgba(4,10,20,0.92);border:1px solid #334477;padding:12px 14px;min-width:min(70vw,640px);box-shadow:0 0 16px #0008;margin:0 auto;pointer-events:none}
+    #combatHud button{pointer-events:auto}
     #combatTitle{color:#ffcc88;font-size:var(--ui-font-md);margin-bottom:8px;text-align:center}
     #combatMeta{display:flex;justify-content:center;gap:14px;color:#88ccff;font-size:var(--ui-font-sm);margin-bottom:6px}
     .combatRow{display:grid;grid-template-columns:220px 1fr 96px;gap:12px;align-items:center;color:#aac4ff;font-size:var(--ui-font-sm);margin-top:10px}
@@ -82,16 +87,16 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;posit
     .combatFill.hull.player{background:linear-gradient(90deg,#33dd66,#88ffaa)}
     .combatFill.hull.enemy{background:linear-gradient(90deg,#ff6655,#ffcc88)}
     .combatValue{text-align:right}
-    #archivePanel,#gameover,#inspectPanel,#settingsPanel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;background:rgba(4,10,20,0.96);border:2px solid #5566aa;box-shadow:0 0 24px #000b;display:none;pointer-events:auto}
-    #archivePanel{width:min(94vw,720px);max-height:70vh;padding:20px;overflow:auto}
-    #archivePanel h3,#gameover h3,#inspectPanel h3,#settingsPanel h3{font-size:var(--ui-font-lg);color:#f0c040;margin-bottom:14px}
+    #archivePanel,#gameover,#inspectPanel,#settingsPanel{position:fixed;left:4px;right:4px;bottom:4px;z-index:60;background:rgba(4,10,20,0.96);border:2px solid #5566aa;box-shadow:0 0 24px #000b;display:none;pointer-events:auto;max-height:85vh;overflow-y:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch}
+    #archivePanel{max-height:70vh;padding:12px;overflow:auto}
+    #archivePanel h3,#gameover h3,#inspectPanel h3,#settingsPanel h3{font-size:var(--ui-font-sm);color:#f0c040;margin-bottom:10px}
     #archiveBody{display:flex;flex-direction:column;gap:4px}
     .arch{font-size:var(--ui-font-sm);line-height:1.5;padding:8px 10px;background:#091224;border-left:3px solid #f0c040;color:#f0c040}
     .arch.r{border-color:#ff4444;color:#ff8888}.arch.g{border-color:#44ff88;color:#88ffaa}.arch.b{border-color:#44aaff;color:#88ccff}.arch.o{border-color:#ffaa44;color:#ffcc88}
-    #gameover{width:min(94vw,520px);padding:24px;text-align:center}
-    #goSummary{font-size:var(--ui-font-sm);line-height:1.6;color:#aac4ff;margin:14px 0 18px}
-    #inspectPanel{width:min(94vw,560px);padding:20px}
-    #settingsPanel{width:min(92vw,520px);padding:20px}
+    #gameover{padding:12px;text-align:center}
+    #goSummary{font-size:var(--ui-font-sm);line-height:1.6;color:#aac4ff;margin:10px 0 14px}
+    #inspectPanel{padding:12px}
+    #settingsPanel{padding:12px}
     #buildVersion{margin-top:14px;color:#88ccff;font-size:var(--ui-font-sm);line-height:1.5;word-break:break-word}
     #inspectBody{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;font-size:var(--ui-font-sm);color:#aac4ff}
     .inspectMetric{padding:8px 10px;background:#091224;border-left:3px solid #4458aa}
@@ -108,40 +113,45 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;posit
     .statFlag{display:flex;align-items:center;gap:8px;color:#88ccff;background:rgba(10,18,36,0.75);padding:4px 6px;border-left:3px solid #4458aa;max-width:max-content;flex-wrap:wrap}
     .statLabel{color:#aac4ff}
     .flagBadge{display:inline-flex;align-items:center;justify-content:center;min-width:48px;padding:4px 6px;border:2px solid #f2f4f8;background:#111318;color:#f2f4f8;line-height:1}
-    @media (max-width: 960px){
-      #topbar{grid-template-columns:1fr auto;gap:4px 10px;padding:6px 10px 8px}
-      .sc{font-size:max(10px, calc(10px * var(--ui-scale)));line-height:1.4}
-      .sc.r{display:none}
-      .sc.c{text-align:left}
-      #hpbar{justify-content:flex-start;margin-top:4px}
-      .hs{width:9px;height:9px}
-      .statFlag{display:none}
-      #compass{top:auto;left:auto;bottom:68px;right:10px;width:48px;height:48px}
-      #questBox{display:none}
-      #crewBox{top:auto;left:10px;right:10px;bottom:120px;min-width:0;padding:6px 10px}
-      #crewTitle{font-size:max(9px, calc(9px * var(--ui-scale)))}
-      #crewMeta{font-size:max(9px, calc(9px * var(--ui-scale)));margin-bottom:4px}
-      .crewTrack{height:8px;margin:3px 0 6px}
-      #crewActions{flex-direction:row;flex-wrap:wrap;gap:6px}
-      .tb{min-height:44px;padding:10px 12px;font-size:max(11px, calc(11px * var(--ui-scale)))}
-      #combatHud{left:10px;right:10px;bottom:120px;transform:none;min-width:0;padding:10px}
-      .combatRow{grid-template-columns:1fr;gap:4px}
-      .combatValue{text-align:left}
-      #log{bottom:68px;left:10px;max-width:calc(100vw - 70px)}
-      .le{font-size:max(9px, calc(9px * var(--ui-scale)));padding:5px 7px;margin-bottom:3px}
-      #cornerBtns{right:10px;bottom:10px;gap:6px}
-      #contextBar{left:10px;right:10px;bottom:56px;transform:none;min-width:0;max-width:none;padding:6px 10px}
-      #contextTitle{font-size:max(9px, calc(9px * var(--ui-scale)))}
-      #contextDetail{font-size:max(9px, calc(9px * var(--ui-scale)))}
-      #inspectBody{grid-template-columns:1fr}
-      #pmenu,#cmenu,#tmenu{min-width:min(96vw,520px);padding:16px}
-      .mb{min-height:44px;padding:12px 14px}
-      #archivePanel{width:min(96vw,720px)}
-      #gameover{width:min(96vw,520px)}
-      #inspectPanel{width:min(96vw,560px)}
-      #settingsPanel{width:min(96vw,520px)}
-      .settingRow input[type="range"],.settingRow input[type="number"]{width:120px}
-    }
+    #statusBadge{display:inline-flex;gap:8px;align-items:center;
+      position:fixed;top:6px;left:6px;z-index:32;
+      background:rgba(4,10,20,0.75);border:1px solid rgba(68,88,170,0.5);
+      padding:4px 10px;pointer-events:auto;cursor:pointer;
+      color:#f0c040;font-size:max(10px,calc(10px*var(--ui-scale)))}
+    #actionOverlay{display:none;pointer-events:none;
+      background:rgba(4,10,20,0.75);border:1px solid rgba(68,88,170,0.5);
+      padding:6px 10px;margin:0 10px}
+    #actionOverlay button{pointer-events:auto}
+    .aoRow{display:flex;gap:6px;color:#ffcc88;font-size:max(9px,calc(9px*var(--ui-scale)));align-items:center}
+    .aoBar{flex:1;height:5px;background:#091224;overflow:hidden}
+    .aoFill{height:100%;transition:width 120ms linear}
+    .aoFill.hull{background:linear-gradient(90deg,#ff6655,#ffcc88)}
+    .aoFill.reload{background:linear-gradient(90deg,#44aaff,#88ccff)}
+    .aoFill.enemy{background:linear-gradient(90deg,#ff6644,#ffbb88)}
+    #menuBtn{display:block;min-width:44px;text-align:center}
+    #menuDrawer{position:fixed;bottom:0;left:0;right:0;z-index:55;
+      background:rgba(4,10,20,0.96);border-top:2px solid #5566aa;
+      padding:16px;display:none;pointer-events:auto;
+      transform:translateY(100%);transition:transform 150ms ease-out}
+    #menuDrawer.open{transform:translateY(0)}
+    #menuDrawer .tb{display:block;width:100%;margin-bottom:8px;min-height:44px;text-align:center}
+    #topbar{display:none!important}
+    #minimap{display:none!important}
+    #compass{display:none!important}
+    #contextBar{display:none!important}
+    #combatHud{display:none!important}
+    #crewBox{display:none!important}
+    #questBox{display:none!important}
+    #archiveBtn,#inspectBtn,#settingsBtn,#crewBtn{display:none}
+    #bottomZone{left:10px;right:10px;bottom:54px;max-height:40vh}
+    .tb{min-height:44px;padding:10px 12px;font-size:max(11px, calc(11px * var(--ui-scale)))}
+    #log{bottom:68px;left:10px;max-width:calc(100vw - 70px)}
+    .le{font-size:max(9px, calc(9px * var(--ui-scale)));padding:5px 7px;margin-bottom:3px}
+    #cornerBtns{right:10px;bottom:10px;gap:6px}
+    #inspectBody{grid-template-columns:1fr}
+    .mb{min-height:44px;padding:12px 14px}
+    .settingRow{flex-wrap:wrap}
+    .settingRow input[type="range"],.settingRow input[type="number"]{width:min(50vw,180px)}
     body.reduced-motion .le,
     body.reduced-motion .le.out,
     body.reduced-motion .crewFill,
@@ -158,7 +168,11 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;posit
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="hud">
+<div id="ui-layer">
+  <div id="statusBadge">
+    <span>💰<span id="goldB">500</span></span>
+    <span>👥<span id="crewB">80</span></span>
+  </div>
   <div id="topbar">
     <div class="sc">
       <div>⚓ <span id="snEl">BLACK TIDE</span></div>
@@ -181,47 +195,56 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;posit
       <div class="statSub">🎖 <span id="specEl">0</span> SPEC</div>
     </div>
   </div>
+  <canvas id="minimap" width="110" height="88"></canvas>
+  <canvas id="compass" width="72" height="72"></canvas>
+  <div id="log"></div>
+  <div id="questBox"><div id="questLine">QUEST: NONE</div><div id="eventLine">NO LEGEND ACTIVE</div><div id="fleetLine">FLEET: SOLO</div><div id="milestoneLine">SEED 42</div></div>
+  <div id="bottomZone">
+    <div id="contextBar" data-tone="b"><div id="contextTitle">OPEN SEA</div><div id="contextDetail">Chase rumors, raid trade lanes, and use ports to control the pace of your voyage.</div></div>
+    <div id="combatHud">
+      <div id="combatTitle">ENGAGING</div>
+      <div id="combatMeta">DIST 0.0 · AUTO-FIRE INSIDE RANGE</div>
+      <div class="combatRow">
+        <div id="playerHullLabel">YOUR BOAT HEALTH</div>
+        <div class="combatTrack"><div class="combatFill hull player" id="playerHullBar"></div></div>
+        <div class="combatValue" id="playerHullText">14/14</div>
+      </div>
+      <div class="combatRow">
+        <div id="enemyHullLabel">ENEMY BOAT HEALTH</div>
+        <div class="combatTrack"><div class="combatFill hull enemy" id="enemyHullBar"></div></div>
+        <div class="combatValue" id="enemyHullText">10/10</div>
+      </div>
+      <div class="combatRow">
+        <div id="playerReloadLabel">YOUR BROADSIDE</div>
+        <div class="combatTrack"><div class="combatFill player" id="playerReloadBar"></div></div>
+        <div class="combatValue" id="playerReloadText">READY</div>
+      </div>
+      <div class="combatRow">
+        <div id="enemyReloadLabel">ENEMY BROADSIDE</div>
+        <div class="combatTrack"><div class="combatFill enemy" id="enemyReloadBar"></div></div>
+        <div class="combatValue" id="enemyReloadText">READY</div>
+      </div>
+    </div>
+    <div id="crewBox">
+      <div id="crewTitle">CREW STATE</div>
+      <div id="crewMeta">CALM SEAS</div>
+      <div class="crewTrack"><div class="crewFill" id="feverBar"></div></div>
+      <div class="crewTrack"><div class="crewFill" id="hypeBar"></div></div>
+      <div id="crewActions">
+        <button class="tb" id="shareLootBtn" type="button">SHARE LOOT &amp; PASS THE RUM</button>
+        <button class="tb" id="breakFogBtn" type="button">BLAST THE FOG</button>
+      </div>
+    </div>
+    <div id="actionOverlay"></div>
+  </div>
+  <div id="cornerBtns"><button class="tb" id="menuBtn" type="button">☰</button><button class="tb" id="crewBtn">CREW</button><button class="tb" id="archiveBtn">LOG</button><button class="tb" id="inspectBtn">DETAILS</button><button class="tb" id="settingsBtn">SETTINGS</button></div>
 </div>
-<div id="cornerBtns"><button class="tb" id="archiveBtn">LOG</button><button class="tb" id="inspectBtn">DETAILS</button><button class="tb" id="settingsBtn">SETTINGS</button></div>
-<div id="contextBar" data-tone="b"><div id="contextTitle">OPEN SEA</div><div id="contextDetail">Chase rumors, raid trade lanes, and use ports to control the pace of your voyage.</div></div>
-<div id="questBox"><div id="questLine">QUEST: NONE</div><div id="eventLine">NO LEGEND ACTIVE</div><div id="fleetLine">FLEET: SOLO</div><div id="milestoneLine">SEED 42</div></div>
-<div id="crewBox">
-  <div id="crewTitle">CREW STATE</div>
-  <div id="crewMeta">CALM SEAS</div>
-  <div class="crewTrack"><div class="crewFill" id="feverBar"></div></div>
-  <div class="crewTrack"><div class="crewFill" id="hypeBar"></div></div>
-  <div id="crewActions">
-    <button class="tb" id="shareLootBtn" type="button">SHARE LOOT &amp; PASS THE RUM</button>
-    <button class="tb" id="breakFogBtn" type="button">BLAST THE FOG</button>
-  </div>
+<div id="menuDrawer">
+  <button class="tb" id="drawerDetails" type="button">SHIP DETAILS</button>
+  <button class="tb" id="drawerLog" type="button">CAPTAIN'S LOG</button>
+  <button class="tb" id="drawerSettings" type="button">SETTINGS</button>
+  <div class="mc" id="drawerClose">[ CLOSE ]</div>
 </div>
-<div id="combatHud">
-  <div id="combatTitle">ENGAGING</div>
-  <div id="combatMeta">DIST 0.0 · AUTO-FIRE INSIDE RANGE</div>
-  <div class="combatRow">
-    <div id="playerHullLabel">YOUR BOAT HEALTH</div>
-    <div class="combatTrack"><div class="combatFill hull player" id="playerHullBar"></div></div>
-    <div class="combatValue" id="playerHullText">14/14</div>
-  </div>
-  <div class="combatRow">
-    <div id="enemyHullLabel">ENEMY BOAT HEALTH</div>
-    <div class="combatTrack"><div class="combatFill hull enemy" id="enemyHullBar"></div></div>
-    <div class="combatValue" id="enemyHullText">10/10</div>
-  </div>
-  <div class="combatRow">
-    <div id="playerReloadLabel">YOUR BROADSIDE</div>
-    <div class="combatTrack"><div class="combatFill player" id="playerReloadBar"></div></div>
-    <div class="combatValue" id="playerReloadText">READY</div>
-  </div>
-  <div class="combatRow">
-    <div id="enemyReloadLabel">ENEMY BROADSIDE</div>
-    <div class="combatTrack"><div class="combatFill enemy" id="enemyReloadBar"></div></div>
-    <div class="combatValue" id="enemyReloadText">READY</div>
-  </div>
-</div>
-<canvas id="minimap" width="110" height="88"></canvas>
-<canvas id="compass" width="72" height="72"></canvas>
-<div id="log"></div>
 <div id="pmenu"><h3 id="ptitle">PORT</h3><div id="pbody"></div><div class="mc" id="pclose">[ CLOSE ]</div></div>
 <div id="cmenu"><h3 id="ctitle">CAPTURED!</h3><div id="cbody"></div><div class="mc" id="cclose">[ CLOSE ]</div></div>
 <div id="tmenu"><h3 id="ttitle">TRADE</h3><div id="tbody"></div><div class="mc" id="tclose">[ CLOSE ]</div></div>

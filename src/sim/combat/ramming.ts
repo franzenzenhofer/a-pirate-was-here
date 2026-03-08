@@ -32,7 +32,8 @@ function applyRammingPair(gs: GameState, left: EnemyShip, right: EnemyShip): voi
 function applyRammingPair(gs: GameState, left: Ship, right: Ship): void {
   if ((left.impactT ?? 0) > 0 || (right.impactT ?? 0) > 0) return;
   const distance = Math.hypot(left.x - right.x, left.y - right.y);
-  if (distance > collisionRadius(left) + collisionRadius(right)) return;
+  const minimumDistance = collisionRadius(left) + collisionRadius(right);
+  if (distance > minimumDistance) return;
 
   if (tryBreakCrabShell(gs, left, right) || tryBreakCrabShell(gs, right, left)) {
     gs.particles.push(...createExplosion((left.x + right.x) / 2, (left.y + right.y) / 2, '#e0b840', 14));
@@ -44,6 +45,9 @@ function applyRammingPair(gs: GameState, left: Ship, right: Ship): void {
   right.hp = Math.max(0, right.hp - rightDamage);
   left.impactT = IMPACT_COOLDOWN;
   right.impactT = IMPACT_COOLDOWN;
+  separateShips(left, right, distance, minimumDistance);
+  left.speed *= 0.65;
+  right.speed *= 0.65;
 
   gs.particles.push(...createExplosion((left.x + right.x) / 2, (left.y + right.y) / 2, '#ffcc88', 10));
 
@@ -64,6 +68,19 @@ function collisionDamage(target: Pick<Ship, 'maxHp' | 'speed'>, other: Pick<Ship
   const speedFactor = Math.max(0.8, Math.abs(other.speed - target.speed) + other.speed * 0.45);
   const ramBonus = 'ramBonus' in other && typeof other.ramBonus === 'number' ? other.ramBonus : 0;
   return Math.max(1, Math.round(sizeFactor * speedFactor * (2.2 + ramBonus * 0.35)));
+}
+
+function separateShips(left: Ship, right: Ship, distance: number, minimumDistance: number): void {
+  const overlap = minimumDistance - distance;
+  if (overlap <= 0) return;
+  const fallbackAngle = left.angle || 0;
+  const normalX = distance > 1e-6 ? (right.x - left.x) / distance : Math.cos(fallbackAngle);
+  const normalY = distance > 1e-6 ? (right.y - left.y) / distance : Math.sin(fallbackAngle);
+  const push = overlap / 2 + 0.01;
+  left.x -= normalX * push;
+  left.y -= normalY * push;
+  right.x += normalX * push;
+  right.y += normalY * push;
 }
 
 function tryBreakCrabShell(gs: GameState, attacker: Ship, defender: Ship): boolean {

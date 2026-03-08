@@ -7,11 +7,7 @@ export function renderContextHint(gs: GameState): void {
   const detail = document.getElementById('contextDetail');
   if (!bar || !title || !detail) return;
   const hint = getContextHint(gs);
-  if (!hint) {
-    bar.style.display = 'none';
-    return;
-  }
-  bar.style.display = 'block';
+  if (!hint) return;
   bar.setAttribute('data-tone', hint.tone);
   title.textContent = hint.title;
   detail.textContent = hint.detail;

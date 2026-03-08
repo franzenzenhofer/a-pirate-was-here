@@ -2,7 +2,6 @@ import { getCombatHudState } from './combat-hud';
 import type { GameState } from '../sim/state/game-state';
 
 export function renderCombatHud(gs: GameState): void {
-  const panel = document.getElementById('combatHud');
   const title = document.getElementById('combatTitle');
   const meta = document.getElementById('combatMeta');
   const playerHullLabel = document.getElementById('playerHullLabel');
@@ -17,21 +16,13 @@ export function renderCombatHud(gs: GameState): void {
   const playerHullText = document.getElementById('playerHullText');
   const enemyHullBar = document.getElementById('enemyHullBar');
   const enemyHullText = document.getElementById('enemyHullText');
-  if (!panel || !title || !meta || !playerBar || !playerText || !enemyBar || !enemyText
+  if (!title || !meta || !playerBar || !playerText || !enemyBar || !enemyText
     || !playerHullLabel || !playerReloadLabel || !enemyHullLabel || !enemyReloadLabel
     || !playerHullBar || !playerHullText || !enemyHullBar || !enemyHullText) return;
-  if (gs.gameOver || gs.player.hp <= 0) {
-    panel.style.display = 'none';
-    return;
-  }
 
   const combat = getCombatHudState(gs);
-  if (!combat) {
-    panel.style.display = 'none';
-    return;
-  }
+  if (!combat) return;
 
-  panel.style.display = 'block';
   title.textContent = `ENGAGING ${combat.targetName}`;
   meta.textContent = `DIST ${combat.distance.toFixed(1)} · AUTO-FIRE INSIDE RANGE`;
   playerHullLabel.textContent = `${combat.playerName} HEALTH`;

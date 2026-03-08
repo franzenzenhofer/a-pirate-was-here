@@ -21,8 +21,6 @@ function applySettingsUI(gs: GameState): void {
   root.style.setProperty('--ui-scale', String(Math.max(1, gs.settings.textScale)));
   body.classList.toggle('reduced-motion', gs.settings.reducedMotion);
   body.classList.toggle('color-safe', gs.settings.colorSafeHud);
-  const minimap = document.getElementById('minimap');
-  if (minimap) minimap.style.display = gs.settings.minimapMode === 'hidden' ? 'none' : 'block';
   syncInputValue('textScaleInput', String(gs.settings.textScale));
   syncCheckbox('masterAudioInput', gs.settings.audio);
   syncCheckbox('reducedMotionInput', gs.settings.reducedMotion);
@@ -75,17 +73,11 @@ function renderCrewState(gs: GameState): void {
   const meta = document.getElementById('crewMeta');
   const feverBar = document.getElementById('feverBar');
   const hypeBar = document.getElementById('hypeBar');
-  const shareLootBtn = document.getElementById('shareLootBtn') as HTMLButtonElement | null;
-  const breakFogBtn = document.getElementById('breakFogBtn') as HTMLButtonElement | null;
-  if (!meta || !feverBar || !hypeBar || !shareLootBtn || !breakFogBtn) return;
+  if (!meta || !feverBar || !hypeBar) return;
   const feverProgress = gs.player.feverT > 0 ? gs.player.feverT / 120000 : 0;
   const hypeProgress = gs.player.hypedT > 0 ? Math.min(1, gs.player.hypedT / 60000) : 0;
   feverBar.style.width = `${Math.max(0, Math.min(100, feverProgress * 100))}%`;
   hypeBar.style.width = `${Math.max(0, Math.min(100, hypeProgress * 100))}%`;
-  shareLootBtn.style.display = gs.player.unsharedGold > 0 ? 'block' : 'none';
-  breakFogBtn.style.display = gs.player.deafenedT <= 0 && gs.fogZones.some(fog => Math.hypot(gs.player.x - fog.x, gs.player.y - fog.y) < fog.radius)
-    ? 'block'
-    : 'none';
   meta.textContent = gs.player.hypedT > 0
     ? `HYPED · ${Math.ceil(gs.player.hypedT / 1000)}s · fresh loot ${gs.player.unsharedGold}g`
     : gs.player.feverT > 0

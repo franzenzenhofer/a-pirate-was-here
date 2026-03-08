@@ -1,5 +1,11 @@
 import type { SessionUIActions } from './session-ui-types';
 
+let activeModal: string | null = null;
+
+export function getActiveModal(): string | null {
+  return activeModal;
+}
+
 export function bindSessionUI(actions: SessionUIActions): void {
   bindButton('goRestart', actions.onRestart);
   bindButton('saveNowBtn', actions.onSave);
@@ -18,6 +24,39 @@ export function bindSessionUI(actions: SessionUIActions): void {
   bindSettingControl('colorSafeInput', 'change', value => actions.onSettingsChanged({ colorSafeHud: Boolean(value) }));
   bindSettingControl('seaAudioInput', 'input', value => actions.onSettingsChanged({ seaAudio: Math.max(0, Math.min(1, Number(value))) }));
   bindSettingControl('musicAudioInput', 'input', value => actions.onSettingsChanged({ musicAudio: Math.max(0, Math.min(1, Number(value))) }));
+  bindMobileUI(actions);
+}
+
+function bindMobileUI(actions: SessionUIActions): void {
+  bindButton('statusBadge', () => togglePanel('inspectPanel'));
+  bindButton('menuBtn', () => openDrawer());
+  bindButton('drawerClose', () => closeDrawer());
+  bindButton('drawerDetails', () => { closeDrawer(); togglePanel('inspectPanel'); });
+  bindButton('drawerLog', () => { closeDrawer(); togglePanel('archivePanel'); });
+  bindButton('drawerSettings', () => { closeDrawer(); togglePanel('settingsPanel'); });
+  bindActionOverlayDelegation(actions);
+}
+
+function bindActionOverlayDelegation(actions: SessionUIActions): void {
+  const overlay = document.getElementById('actionOverlay');
+  if (!overlay) return;
+  overlay.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (target.id === 'aoShareLoot') actions.onShareLoot();
+    if (target.id === 'aoBlastFog') actions.onBreakFog();
+  });
+}
+
+function openDrawer(): void {
+  const drawer = document.getElementById('menuDrawer');
+  if (drawer) { drawer.style.display = 'block'; requestAnimationFrame(() => drawer.classList.add('open')); }
+}
+
+function closeDrawer(): void {
+  const drawer = document.getElementById('menuDrawer');
+  if (!drawer) return;
+  drawer.classList.remove('open');
+  setTimeout(() => { if (!drawer.classList.contains('open')) drawer.style.display = 'none'; }, 160);
 }
 
 function bindButton(id: string, onClick: () => void): void {
@@ -50,10 +89,13 @@ function bindSettingControl(
 function togglePanel(id: string): void {
   const panel = document.getElementById(id);
   if (!panel) return;
-  panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+  const wasOpen = panel.style.display === 'block';
+  panel.style.display = wasOpen ? 'none' : 'block';
+  activeModal = wasOpen ? null : id;
 }
 
 function closePanel(id: string): void {
   const panel = document.getElementById(id);
   if (panel) panel.style.display = 'none';
+  if (activeModal === id) activeModal = null;
 }

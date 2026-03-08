@@ -5,6 +5,7 @@ import type { GameState } from '../sim/state/game-state';
 import type { Camera } from '../renderer/camera';
 import { followTarget } from '../renderer/camera';
 import { moveShip } from '../sim/nav/movement';
+import { trackShipRecovery } from '../sim/nav/recovery';
 import { fireBroadside } from '../sim/combat/naval';
 import { createExplosion } from '../sim/combat/damage';
 import { windModifier } from '../sim/nav/wind';
@@ -15,6 +16,7 @@ import { applyCombatBuff, registerSeaLoot } from '../sim/state/crew-chaos';
 import { nextRandom } from '../sim/state/random';
 import { hasGoodBroadside, preferredBroadsidePoint, selectBestBroadsideTarget } from '../sim/combat/shot-selection';
 import { specialistHpRegen, specialistReloadMultiplier, specialistSpeedBonus, specialistWagesPerDay } from '../sim/state/specialists';
+import { clampTargetToSea } from '../sim/nav/collision';
 
 let windWarningCooldown = 0;
 
@@ -54,6 +56,7 @@ export function updatePlayer(gs: GameState, cam: Camera, dt: number): void {
       1.0,
       gs.world.tiles,
     );
+    trackShipRecovery(player, moved, dt, gs.world.tiles);
     maybeWarnAgainstWind(gs, buffed.speed);
     if (Math.hypot(player.targetX - player.x, player.targetY - player.y) < 0.3) {
       player.targetX = null;
@@ -87,8 +90,9 @@ function autoFirePlayer(gs: GameState): void {
   if (!target) return;
   if (!hasGoodBroadside(player, target)) {
     const point = preferredBroadsidePoint(player, target);
-    player.targetX = point.x;
-    player.targetY = point.y;
+    const navTarget = clampTargetToSea(gs.world.tiles, player.x, player.y, point.x, point.y);
+    player.targetX = navTarget.x;
+    player.targetY = navTarget.y;
     return;
   }
   const damage = 2 + fleetDamageBonus(player);

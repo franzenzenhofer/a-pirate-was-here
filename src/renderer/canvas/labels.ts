@@ -1,14 +1,14 @@
-import { displayShipFlag, displayShipName, sailingNation } from '../../core/ship-identity';
+import { displayShipLabel } from '../../core/ship-identity';
 import { TILE_PX } from '../../config/world';
 import type { EnemyShip, Port } from '../../core/types';
 import type { Camera } from '../camera';
-import { drawNationPennant } from './pennants';
+import { nationStyle } from '../../core/nation-style';
 
-const SHIP_LABEL_FONT = '16px "Press Start 2P"';
-const FLAG_LABEL_FONT = '12px "Press Start 2P"';
-const PORT_LABEL_FONT = '16px "Press Start 2P"';
+const SHIP_LABEL_FONT = '13px "Press Start 2P"';
+const SHIP_META_FONT = '11px "Press Start 2P"';
+const PORT_LABEL_FONT = '13px "Press Start 2P"';
 
-/** Draw enemy ship labels, tiers, flags — batched by font */
+/** Draw enemy ship labels as a single readable identity line plus optional state */
 export function drawEnemyLabels(
   ctx: CanvasRenderingContext2D,
   enemies: EnemyShip[],
@@ -18,7 +18,6 @@ export function drawEnemyLabels(
   const x1 = ~~(cam.x + cam.screenW / TILE_PX) + 2;
   const y1 = ~~(cam.y + cam.screenH / TILE_PX) + 2;
 
-  // First pass: pixel font labels
   ctx.font = SHIP_LABEL_FONT;
   ctx.textAlign = 'center';
   for (const en of enemies) {
@@ -29,29 +28,17 @@ export function drawEnemyLabels(
     const lc = isLegend ? '#bbf8ff' : en.role === 'PIRATE' ? '#ff88ff'
       : en.role === 'MERCHANT' ? '#88ffaa'
       : en.role === 'WARSHIP' ? '#ffaa44' : '#aaccff';
-    ctx.fillStyle = lc;
-    ctx.fillText(displayShipName(en), esx, esy - TILE_PX * 1.65);
-    if (isLegend) ctx.fillText('LEGEND', esx, esy - TILE_PX * 2.05);
-    if (en.disabled) {
-      ctx.fillStyle = '#ff5544';
-      ctx.fillText('DISABLED', esx, esy - TILE_PX * (isLegend ? 2.45 : 2.05));
+    drawCenterChip(ctx, displayShipLabel(en), esx, esy - TILE_PX * 1.82, lc);
+    const meta: string[] = [];
+    if (isLegend) meta.push('LEGEND');
+    if (en.disabled) meta.push('DISABLED');
+    if (meta.length > 0) {
+      ctx.font = SHIP_META_FONT;
+      drawCenterChip(ctx, meta.join(' · '), esx, esy - TILE_PX * 2.32, en.disabled ? '#ff7f73' : '#dfe7ff');
+      ctx.font = SHIP_LABEL_FONT;
     }
     ctx.fillStyle = '#ffcc00';
     ctx.fillText('\u2605'.repeat(en.ti + 1), esx, esy + TILE_PX * 1.8);
-  }
-
-  // Second pass: nation pennants and flag codes
-  ctx.font = FLAG_LABEL_FONT;
-  ctx.fillStyle = '#dfe7ff';
-  ctx.textAlign = 'left';
-  for (const en of enemies) {
-    if (en.sunk || en.x < x0 || en.x > x1 || en.y < y0 || en.y > y1) continue;
-    const esx = (en.x - cam.x) * TILE_PX;
-    const esy = (en.y - cam.y) * TILE_PX;
-    const pennantX = esx - TILE_PX * 2.2;
-    const pennantY = esy - TILE_PX * 1.7;
-    drawNationPennant(ctx, pennantX, pennantY, sailingNation(en), 0.9);
-    ctx.fillText(displayShipFlag(en), pennantX + 18, pennantY + 7);
   }
 }
 
@@ -71,12 +58,35 @@ export function drawPortLabels(
     const ppx = (p.x - cam.x) * TILE_PX + 8;
     const ppy = (p.y - cam.y) * TILE_PX - 14;
     const lc = p.rel === 'friendly' ? '#44ff88' : p.rel === 'enemy' ? '#ff5544' : '#ffcc44';
-    const label = p.name;
-    const width = Math.max(168, ctx.measureText(label).width + 40);
-    ctx.fillStyle = 'rgba(0,0,0,0.82)';
-    ctx.fillRect(ppx - width / 2, ppy - 18, width, 26);
-    drawNationPennant(ctx, ppx - width / 2 + 10, ppy - 14, p.nat, 0.8);
-    ctx.fillStyle = lc;
-    ctx.fillText(label, ppx - width / 2 + 32, ppy);
+    const label = `${nationStyle(p.nat).code} · ${p.name}`;
+    drawLeftChip(ctx, label, ppx, ppy, lc);
   }
+}
+
+function drawCenterChip(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  color: string,
+): void {
+  const width = ctx.measureText(text).width;
+  ctx.fillStyle = 'rgba(3, 8, 20, 0.86)';
+  ctx.fillRect(x - width / 2 - 8, y - 11, width + 16, 16);
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
+}
+
+function drawLeftChip(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  color: string,
+): void {
+  const width = Math.max(164, ctx.measureText(text).width + 16);
+  ctx.fillStyle = 'rgba(0,0,0,0.82)';
+  ctx.fillRect(x - width / 2, y - 18, width, 26);
+  ctx.fillStyle = color;
+  ctx.fillText(text, x - width / 2 + 8, y);
 }

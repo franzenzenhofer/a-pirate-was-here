@@ -10,6 +10,36 @@ const QUEST_POOL = [
   { id: 'fleet', title: 'GROW THE FLEET', detail: 'Claim 2 escort ships', kind: 'explore', goal: 2, rewardGold: 260, rewardFame: 50 },
 ] as const;
 
+const STARTER_QUESTS = [
+  {
+    id: 'first-hold',
+    title: 'FIRST HOLD',
+    detail: 'Dock at a port, buy 5 cargo, and get back to sea.',
+    kind: 'trade',
+    goal: 5,
+    rewardGold: 140,
+    rewardFame: 18,
+  },
+  {
+    id: 'first-prize',
+    title: 'FIRST PRIZE',
+    detail: 'Disable a ship and claim it into your fleet.',
+    kind: 'explore',
+    goal: 1,
+    rewardGold: 180,
+    rewardFame: 28,
+  },
+  {
+    id: 'gun-drill',
+    title: 'GUN DRILL',
+    detail: 'Sink 1 ship with a clean broadside.',
+    kind: 'combat',
+    goal: 1,
+    rewardGold: 180,
+    rewardFame: 24,
+  },
+] as const;
+
 export function updateObjectives(gs: GameState): void {
   if (!gs.activeQuest) gs.activeQuest = createQuest(gs);
   updateQuest(gs);
@@ -25,6 +55,8 @@ export function resolveLegendaryVictory(gs: GameState, shipType: string): void {
 }
 
 function createQuest(gs: GameState): GameState['activeQuest'] {
+  const starter = createStarterQuest(gs);
+  if (starter) return starter;
   const template = QUEST_POOL[(gs.seed + gs.player.day + gs.player.fame) % QUEST_POOL.length] ?? QUEST_POOL[0];
   return { ...template, progress: progressFor(gs, template.kind), completed: false };
 }
@@ -56,6 +88,21 @@ function maybeStartLegend(gs: GameState): void {
     active: true,
   };
   emitEvent(gs, { kind: 'log', msg: '🌩 LEGEND AWAKENS: ' + gs.activeEvent.title, tone: 'o' });
+}
+
+function createStarterQuest(gs: GameState): GameState['activeQuest'] | null {
+  if (gs.player.fame >= 40 || gs.player.day > 6) return null;
+
+  const starter = cargoCount(gs.player) < STARTER_QUESTS[0].goal
+    ? STARTER_QUESTS[0]
+    : gs.player.fleet.length < STARTER_QUESTS[1].goal
+      ? STARTER_QUESTS[1]
+      : gs.player.kills < STARTER_QUESTS[2].goal
+        ? STARTER_QUESTS[2]
+        : null;
+
+  if (!starter) return null;
+  return { ...starter, progress: progressFor(gs, starter.kind), completed: false };
 }
 
 function progressFor(gs: GameState, kind: string): number {
