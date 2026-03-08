@@ -1,5 +1,4 @@
 import { TILE_PX } from '../../config/world';
-import { drawNationPennant } from './pennants';
 import { shipHullFor } from './ship-hulls';
 import { drawMonsterShip } from './ship-monsters';
 
@@ -17,7 +16,7 @@ export function drawShip(
   sx: number, sy: number,
   ang: number, col: string, tk: string,
   scale: number, disabled: boolean,
-  nation: string,
+  _nation: string,
   hpRatio: number = 1,
 ): void {
   const hull = shipHullFor(tk);
@@ -75,9 +74,6 @@ export function drawShip(
   drawBowsprit(ctx, disabled, s, hull);
   drawRigging(ctx, disabled, s, hull);
 
-  if (!disabled) {
-    drawNationPennant(ctx, -s * 0.05, -s * hull.l * 0.94, nation, Math.max(0.35, s * 0.12));
-  }
   if (isGhost && !disabled) {
     ctx.fillStyle = GHOST_GLOW;
     ctx.fillRect(-s * 1.1, -s * 1.8, s * 2.2, s * 3.2);
