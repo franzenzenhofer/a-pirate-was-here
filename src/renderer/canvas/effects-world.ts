@@ -116,15 +116,21 @@ function drawTreasure(
   const x = (treasure.x + 0.5 - cam.x) * TILE_PX;
   const y = (treasure.y + 0.5 - cam.y) * TILE_PX;
   const pulse = 0.5 + Math.sin(now * 0.004 + treasure.x) * 0.5;
-  ctx.globalAlpha = 0.65 + pulse * 0.35;
-  ctx.fillStyle = '#8B6914';
-  ctx.fillRect(x - 5, y - 4, 10, 8);
-  ctx.fillStyle = '#A67C00';
-  ctx.fillRect(x - 6, y - 6, 12, 4);
-  ctx.fillStyle = '#FFD700';
-  ctx.fillRect(x - 1, y - 2, 2, 2);
-  ctx.fillStyle = `rgba(255,215,0,${0.3 * pulse})`;
-  ctx.fillRect(x - 8, y - 8, 16, 16);
+  ctx.globalAlpha = 0.7 + pulse * 0.3;
+  ctx.fillStyle = 'rgba(9,18,36,0.72)';
+  ctx.fillRect(x - 8, y - 8, 16, 15);
+  ctx.fillStyle = '#5c3a18';
+  ctx.fillRect(x - 6, y - 2, 12, 8);
+  ctx.fillStyle = '#b3832d';
+  ctx.fillRect(x - 7, y - 6, 14, 4);
+  ctx.fillStyle = '#2d1608';
+  ctx.fillRect(x - 1, y - 2, 2, 8);
+  ctx.fillStyle = '#ffe08b';
+  ctx.fillRect(x - 2, y - 4, 4, 2);
+  ctx.fillRect(x - 5, y - 1, 2, 2);
+  ctx.fillRect(x + 3, y - 1, 2, 2);
+  ctx.fillStyle = `rgba(255,215,0,${0.22 + pulse * 0.2})`;
+  ctx.fillRect(x - 10, y - 10, 20, 18);
   ctx.globalAlpha = 1;
 }
 
@@ -135,15 +141,41 @@ function drawPickup(
 ): void {
   const x = (pickup.x - cam.x) * TILE_PX;
   const y = (pickup.y - cam.y) * TILE_PX;
-  ctx.globalAlpha = 0.9;
-  ctx.fillStyle = pickup.color;
-  ctx.fillRect(x - 6, y - 6, 12, 12);
+  ctx.globalAlpha = 0.94;
+  ctx.fillStyle = 'rgba(9,18,36,0.8)';
+  ctx.fillRect(x - 8, y - 8, 16, 16);
+  if (pickup.kind === 'cargo') {
+    ctx.fillStyle = '#7d5230';
+    ctx.fillRect(x - 6, y - 6, 12, 12);
+    ctx.fillStyle = '#b58754';
+    ctx.fillRect(x - 5, y - 5, 10, 3);
+    ctx.fillStyle = '#e7c48a';
+    ctx.fillRect(x - 1, y - 6, 2, 12);
+    ctx.fillRect(x - 6, y - 1, 12, 2);
+  } else if (pickup.kind === 'map') {
+    ctx.fillStyle = '#f0dfb0';
+    ctx.fillRect(x - 6, y - 6, 12, 12);
+    ctx.fillStyle = '#d3bb83';
+    ctx.fillRect(x - 5, y - 5, 10, 10);
+    ctx.fillStyle = '#8a5528';
+    ctx.fillRect(x - 4, y - 2, 8, 1.5);
+    ctx.fillRect(x - 2, y + 1, 5, 1.5);
+    ctx.fillStyle = '#c94f55';
+    ctx.fillRect(x + 2, y - 4, 2, 2);
+  } else {
+    ctx.fillStyle = '#e8e1d4';
+    ctx.fillRect(x - 4, y - 6, 8, 12);
+    ctx.fillStyle = '#bca56a';
+    ctx.fillRect(x - 2, y - 6, 4, 12);
+    ctx.fillStyle = '#f5d46f';
+    ctx.fillRect(x - 5, y - 7, 10, 3);
+  }
   ctx.strokeStyle = '#091224';
   ctx.lineWidth = 2;
-  ctx.strokeRect(x - 6, y - 6, 12, 12);
+  ctx.strokeRect(x - 8, y - 8, 16, 16);
   ctx.fillStyle = '#f4f0d8';
-  ctx.font = '12px "Press Start 2P"';
+  ctx.font = '10px "Press Start 2P"';
   ctx.textAlign = 'center';
-  ctx.fillText(pickup.kind === 'map' ? 'M' : pickup.kind === 'tooth' ? 'T' : '$', x, y - 12);
   ctx.fillText(pickup.label, x, y + 22);
+  ctx.globalAlpha = 1;
 }
